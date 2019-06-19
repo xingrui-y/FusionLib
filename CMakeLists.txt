@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 project(FusionLIB VERSION 0.1 LANGUAGES CUDA CXX)
 
-set(CMAKE_CXX_STANDARD 11)
-
 find_package(CUDA 10.1 REQUIRED)
 find_package(Eigen3 3.3 REQUIRED)
 find_package(OpenCV 3.4 REQUIRED)
@@ -28,19 +26,18 @@ PRIVATE
 
 target_include_directories(fusion
 PUBLIC
-    include/    
-    include/fusion/
+    $<INSTALL_INTERFACE:include>   
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+PRIVATE
     ${CUDA_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIRS}
-PRIVATE
-    src/fusion/core/
-    src/fusion/icp/
-    src/fusion/mapping/
-    include/fusion/core/
-    include/fusion/icp/
-    include/fusion/math/
-    include/fusion/mapping/
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_compile_features(fusion 
+PRIVATE 
+    cxx_std_11
 )
 
 set_target_properties(fusion
@@ -57,3 +54,12 @@ PUBLIC
     ${OpenCV_LIBRARIES}
     ${CUDA_LIBRARIES}
 )
+
+install(TARGETS fusion
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        CONFIGURATIONS Release)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
+        DESTINATION /usr/local)
