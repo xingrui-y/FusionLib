@@ -1,9 +1,12 @@
-#ifndef __REDUCE_SUM__
-#define __REDUCE_SUM__
+#ifndef FUSION_ICP_REDUCE_SUM_H
+#define FUSION_ICP_REDUCE_SUM_H
 
 #include <cuda_runtime_api.h>
 
 #define MAX_WARP_SIZE 32
+
+namespace fusion
+{
 
 template <typename T, int size>
 __device__ __forceinline__ void WarpReduce(T *val)
@@ -56,5 +59,7 @@ void inline create_jtjjtr(cv::Mat &host_data, float *host_a, float *host_b)
                 host_a[j * rows + i] = host_a[i * rows + j] = value;
         }
 }
+
+} // namespace fusion
 
 #endif

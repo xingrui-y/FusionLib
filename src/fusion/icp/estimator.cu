@@ -1,6 +1,6 @@
 #include <fusion/icp/estimator.h>
-#include <fusion/math/matrices.h>
-#include <fusion/math/vectors.h>
+#include <fusion/math/matrix.h>
+#include <fusion/math/vector.h>
 #include <fusion/core/cuda_utils.h>
 #include <fusion/icp/reduce_sum.h>
 #include <thrust/device_vector.h>
@@ -100,7 +100,7 @@ struct RgbReduction
 
     int cols, rows, N;
     float u0, v0;
-    DeviceMatrix3x4 pose;
+    Matrix3x4f pose;
     float fx, fy, cx, cy, invfx, invfy;
     cv::cuda::PtrStep<Vector4f> point_cloud, last_vmap;
     cv::cuda::PtrStep<float> last_image, curr_image;
@@ -143,7 +143,7 @@ void rgb_reduce(const cv::cuda::GpuMat &curr_intensity,
     rr.last_vmap = last_vmap;
     rr.dIdx = intensity_dx;
     rr.dIdy = intensity_dy;
-    rr.pose = pose;
+    rr.pose = Matrix3x4f(pose.cast<float>().matrix3x4());
     rr.fx = K.fx;
     rr.fy = K.fy;
     rr.cx = K.cx;
@@ -255,7 +255,7 @@ struct ICPReduction
         }
     }
 
-    DeviceMatrix3x4 pose;
+    Matrix3x4f pose;
     cv::cuda::PtrStep<Vector4f> curr_vmap_, last_vmap_;
     cv::cuda::PtrStep<Vector4f> curr_nmap_, last_nmap_;
     int cols, rows, N;
@@ -292,7 +292,7 @@ void icp_reduce(const cv::cuda::GpuMat &curr_vmap,
     icp.cols = cols;
     icp.rows = rows;
     icp.N = cols * rows;
-    icp.pose = pose;
+    icp.pose = pose.cast<float>().matrix3x4();
     icp.angleThresh = cos(30 * 3.14 / 180);
     icp.distThresh = 0.01;
     icp.fx = K.fx;

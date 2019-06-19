@@ -1,5 +1,5 @@
-#include <fusion/math/matrices.h>
-#include <fusion/math/vectors.h>
+#include <fusion/math/matrix.h>
+#include <fusion/math/vector.h>
 #include <fusion/mapping/map_struct.h>
 #include <fusion/core/cuda_utils.h>
 #include <fstream>

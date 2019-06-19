@@ -1,6 +1,6 @@
 #include <fusion/mapping/map_proc.h>
-#include <fusion/math/matrices.h>
-#include <fusion/math/vectors.h>
+#include <fusion/math/matrix.h>
+#include <fusion/math/vector.h>
 #include <fusion/core/cuda_utils.h>
 #include <fusion/mapping/prefix_sum.h>
 #include <fusion/mapping/cuda_constants.h>
