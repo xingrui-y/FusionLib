@@ -1,5 +1,6 @@
 #include "map_proc.h"
-#include "vector_math.h"
+#include <fusion/math/matrices.h>
+#include <fusion/math/vectors.h>
 #include "cuda_utils.h"
 #include "prefix_sum.h"
 #include "cuda_constants.h"
@@ -275,7 +276,7 @@ void create_mesh_vertex_only(
     bva.block_array = block_list;
     bva.block_count = cuda_block_count;
     bva.triangle_count = cuda_triangle_count;
-    bva.triangles = static_cast<Vector3f*>(vertex_data);
+    bva.triangles = static_cast<Vector3f *>(vertex_data);
 
     dim3 thread(1024);
     dim3 block = dim3(div_up(state.num_total_hash_entries_, thread.x));
@@ -324,8 +325,8 @@ void create_mesh_with_normal(
     bva.block_array = block_list;
     bva.block_count = cuda_block_count;
     bva.triangle_count = cuda_triangle_count;
-    bva.triangles = static_cast<Vector3f*>(vertex_data);
-    bva.surface_normal = static_cast<Vector3f*>(vertex_normal);
+    bva.triangles = static_cast<Vector3f *>(vertex_data);
+    bva.surface_normal = static_cast<Vector3f *>(vertex_normal);
 
     dim3 thread(1024);
     dim3 block = dim3(div_up(state.num_total_hash_entries_, thread.x));
@@ -616,8 +617,8 @@ void create_mesh_with_colour(
     delegate.block_array = block_list;
     delegate.block_count = cuda_block_count;
     delegate.triangle_count = cuda_triangle_count;
-    delegate.triangles = static_cast<Vector3f*>(vertex_data);
-    delegate.vertex_colour = static_cast<Vector3c*>(vertex_colour);
+    delegate.triangles = static_cast<Vector3f *>(vertex_data);
+    delegate.vertex_colour = static_cast<Vector3c *>(vertex_colour);
 
     dim3 thread(1024);
     dim3 block = dim3(div_up(state.num_total_hash_entries_, thread.x));

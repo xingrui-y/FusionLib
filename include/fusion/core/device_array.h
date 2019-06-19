@@ -8,8 +8,8 @@
 template <class T>
 struct PtrSz
 {
-    __device__ inline T &operator[](int x) const;
-    __device__ inline operator T *() const;
+    FUSION_DEVICE inline T &operator[](int x) const;
+    FUSION_DEVICE inline operator T *() const;
 
     T *data;
     size_t size;
@@ -19,7 +19,7 @@ template <class T>
 struct PtrStep
 {
 
-    __device__ inline T *ptr(int y = 0) const;
+    FUSION_DEVICE inline T *ptr(int y = 0) const;
 
     T *data;
 
@@ -30,7 +30,7 @@ template <class T>
 struct PtrStepSz
 {
 
-    __device__ inline T *ptr(int y = 0) const;
+    FUSION_DEVICE inline T *ptr(int y = 0) const;
 
     T *data;
 
@@ -135,13 +135,13 @@ struct DeviceArray2D
 // PtrSz
 //------------------------------------------------------------------
 template <class T>
-__device__ inline T &PtrSz<T>::operator[](int x) const
+FUSION_DEVICE inline T &PtrSz<T>::operator[](int x) const
 {
     return data[x];
 }
 
 template <class T>
-__device__ inline PtrSz<T>::operator T *() const
+FUSION_DEVICE inline PtrSz<T>::operator T *() const
 {
     return data;
 }
@@ -150,7 +150,7 @@ __device__ inline PtrSz<T>::operator T *() const
 // PtrStep
 //------------------------------------------------------------------
 template <class T>
-__device__ inline T *PtrStep<T>::ptr(int y) const
+FUSION_DEVICE inline T *PtrStep<T>::ptr(int y) const
 {
     return (T *)((char *)data + y * step);
 }
@@ -159,7 +159,7 @@ __device__ inline T *PtrStep<T>::ptr(int y) const
 // PtrStepSz
 //------------------------------------------------------------------
 template <class T>
-__device__ inline T *PtrStepSz<T>::ptr(int y) const
+FUSION_DEVICE inline T *PtrStepSz<T>::ptr(int y) const
 {
     return (T *)((char *)data + y * step);
 }

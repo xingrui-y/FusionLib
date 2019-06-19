@@ -2,8 +2,12 @@
 #define FUSION_MAPPING_HASH_ENTRY_H
 
 #include <macros.h>
-#include <vector_math.h>
+#include <fusion/math/matrices.h>
+#include <fusion/math/vectors.h>
 #include <cuda_runtime_api.h>
+
+namespace fusion
+{
 
 struct FUSION_EXPORT HashEntry
 {
@@ -51,5 +55,7 @@ FUSION_HOST_AND_DEVICE inline bool HashEntry::operator==(const HashEntry &other)
 {
     return other.pos_ == pos_;
 }
+
+} // namespace fusion
 
 #endif

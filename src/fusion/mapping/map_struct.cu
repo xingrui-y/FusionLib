@@ -1,7 +1,11 @@
 #include "map_struct.h"
-#include "vector_math.h"
+#include <fusion/math/matrices.h>
+#include <fusion/math/vectors.h>
 #include "cuda_utils.h"
 #include <fstream>
+
+namespace fusion
+{
 
 FUSION_DEVICE MapState param;
 
@@ -528,3 +532,5 @@ FUSION_DEVICE int voxel_pos_to_local_idx(const Vector3i &pos)
 
 template class MapStruct<true>;
 template class MapStruct<false>;
+
+} // namespace fusion

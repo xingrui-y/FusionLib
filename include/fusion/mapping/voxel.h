@@ -2,8 +2,12 @@
 #define FUSION_MAPPING_DATA_TYPES_H
 
 #include <macros.h>
-#include <vector_math.h>
+#include <fusion/math/matrices.h>
+#include <fusion/math/vectors.h>
 #include <cuda_runtime_api.h>
+
+namespace fusion
+{
 
 struct FUSION_EXPORT Voxel
 {
@@ -46,5 +50,7 @@ FUSION_DEVICE inline void Voxel::set_weight(float val)
 {
     weight = val;
 }
+
+} // namespace fusion
 
 #endif

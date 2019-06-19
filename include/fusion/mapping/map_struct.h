@@ -23,6 +23,9 @@
 #define NUM_HASH_ENTRIES 100000
 #define NUM_EXCESS_ENTREIS 20000
 
+namespace fusion
+{
+
 // Map info
 struct MapState
 {
@@ -114,5 +117,7 @@ FUSION_DEVICE Vector3i voxel_pos_to_local_pos(Vector3i pos);
 FUSION_DEVICE int local_pos_to_local_idx(const Vector3i &pos);
 FUSION_DEVICE Vector3i local_idx_to_local_pos(const int &idx);
 FUSION_DEVICE int voxel_pos_to_local_idx(const Vector3i &pos);
+
+} // namespace fusion
 
 #endif

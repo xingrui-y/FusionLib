@@ -1,6 +1,7 @@
 #include "cuda_imgproc.h"
 #include "cuda_utils.h"
-#include "vector_math.h"
+#include <fusion/math/matrices.h>
+#include <fusion/math/vectors.h>
 #include "intrinsic_matrix.h"
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudawarping.hpp>
@@ -343,10 +344,10 @@ void build_semi_dense_pyramid(const std::vector<cv::cuda::GpuMat> image_pyr, con
 
 __device__ inline Vector3c interpolate_bilinear(const cv::cuda::PtrStepSz<Vector3c> image, float x, float y)
 {
-    int u = floor(x), v = floor(y);
+    int u = std::floor(x), v = std::floor(y);
     float coeff_x = x - (float)u, coeff_y = y - (float)v;
     Vector3f result = ToVector3f((image.ptr(v)[u] * (1 - coeff_x) + image.ptr(v)[u + 1] * coeff_x) * (1 - coeff_y) +
-                    (image.ptr(v + 1)[u] * (1 - coeff_x) + image.ptr(v + 1)[u + 1] * coeff_x) * coeff_y);
+                                 (image.ptr(v + 1)[u] * (1 - coeff_x) + image.ptr(v + 1)[u + 1] * coeff_x) * coeff_y);
     return ToVector3c(result);
 }
 

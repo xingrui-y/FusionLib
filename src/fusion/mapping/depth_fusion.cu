@@ -1,5 +1,6 @@
 #include "map_proc.h"
-#include "vector_math.h"
+#include <fusion/math/matrices.h>
+#include <fusion/math/vectors.h>
 #include "cuda_utils.h"
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudaarithm.hpp>
@@ -95,7 +96,7 @@ __device__ Vector3f unproject(int x, int y, float z, float invfx, float invfy, f
 }
 
 __device__ Vector3f unproject_world(int x, int y, float z, float invfx,
-                                  float invfy, float cx, float cy, DeviceMatrix3x4 pose)
+                                    float invfy, float cx, float cy, DeviceMatrix3x4 pose)
 {
     return pose(unproject(x, y, z, invfx, invfy, cx, cy));
 }

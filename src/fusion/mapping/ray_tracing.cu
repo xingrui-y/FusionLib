@@ -1,5 +1,6 @@
 #include "map_proc.h"
-#include "vector_math.h"
+#include <fusion/math/matrices.h>
+#include <fusion/math/vectors.h>
 #include "cuda_utils.h"
 #include "prefix_sum.h"
 #include <opencv2/opencv.hpp>
@@ -77,14 +78,14 @@ struct RenderingBlockDelegate
 
             Vector2f pt2d = project(pt3d) / RENDERING_BLOCK_SUBSAMPLE;
 
-            if (block.upper_left.x > floor(pt2d.x))
-                block.upper_left.x = (int)floor(pt2d.x);
+            if (block.upper_left.x > std::floor(pt2d.x))
+                block.upper_left.x = (int)std::floor(pt2d.x);
 
             if (block.lower_right.x < ceil(pt2d.x))
                 block.lower_right.x = (int)ceil(pt2d.x);
 
-            if (block.upper_left.y > floor(pt2d.y))
-                block.upper_left.y = (int)floor(pt2d.y);
+            if (block.upper_left.y > std::floor(pt2d.y))
+                block.upper_left.y = (int)std::floor(pt2d.y);
 
             if (block.lower_right.y < ceil(pt2d.y))
                 block.lower_right.y = (int)ceil(pt2d.y);
@@ -418,7 +419,7 @@ struct MapRenderingDelegate
         if (found_pt)
         {
             result = inv_pose(result * param.voxel_size);
-            vmap.ptr(y)[x] = Vector4f(result.x, result.y ,result.z, 1.0);
+            vmap.ptr(y)[x] = Vector4f(result.x, result.y, result.z, 1.0);
         }
     }
 

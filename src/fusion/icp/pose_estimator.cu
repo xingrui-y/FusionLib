@@ -1,5 +1,6 @@
 #include "pose_estimator.h"
-#include "vector_math.h"
+#include <fusion/math/matrices.h>
+#include <fusion/math/vectors.h>
 #include "cuda_utils.h"
 #include "reduce_sum.h"
 #include <thrust/device_vector.h>
@@ -36,7 +37,7 @@ struct RgbReduction
 
     __device__ float interp2(cv::cuda::PtrStep<float> image, float &x, float &y)
     {
-        int u = floor(x), v = floor(y);
+        int u = std::floor(x), v = std::floor(y);
         float coeff_x = x - u, coeff_y = y - v;
         return (image.ptr(v)[u] * (1 - coeff_x) + image.ptr(v)[u + 1] * coeff_x) * (1 - coeff_y) +
                (image.ptr(v + 1)[u] * (1 - coeff_x) + image.ptr(v + 1)[u + 1] * coeff_x) * coeff_y;
