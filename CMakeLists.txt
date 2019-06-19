@@ -14,8 +14,8 @@ PRIVATE
     src/fusion/core/intrinsic_matrix.cpp
 
     # icp
-    src/fusion/icp/pose_estimator.cu
-    src/fusion/icp/robust_estimator.cu
+    src/fusion/icp/estimator.cu
+    src/fusion/icp/m_estimator.cu
 
     # voxel mapping
     src/fusion/mapping/depth_fusion.cu

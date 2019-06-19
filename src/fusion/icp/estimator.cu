@@ -1,4 +1,4 @@
-#include <fusion/icp/pose_estimator.h>
+#include <fusion/icp/estimator.h>
 #include <fusion/math/matrices.h>
 #include <fusion/math/vectors.h>
 #include <fusion/core/cuda_utils.h>

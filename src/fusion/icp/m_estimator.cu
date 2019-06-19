@@ -1,6 +1,6 @@
 #include <fusion/math/matrices.h>
 #include <fusion/math/vectors.h>
-#include <fusion/icp/pose_estimator.h>
+#include <fusion/icp/m_estimator.h>
 #include <fusion/core/cuda_utils.h>
 #include <fusion/icp/reduce_sum.h>
 #include <thrust/device_vector.h>
