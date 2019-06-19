@@ -1,7 +1,7 @@
-#include "map_struct.h"
 #include <fusion/math/matrices.h>
 #include <fusion/math/vectors.h>
-#include "cuda_utils.h"
+#include <fusion/mapping/map_struct.h>
+#include <fusion/core/cuda_utils.h>
 #include <fstream>
 
 namespace fusion

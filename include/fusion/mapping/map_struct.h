@@ -1,12 +1,11 @@
 #ifndef FUSION_VOXEL_HASHING_MAP_STRUCT
 #define FUSION_VOXEL_HASHING_MAP_STRUCT
 
-#include <cuda.h>
 #include <iostream>
-#include <macros.h>
-#include <voxel.h>
-#include <hash_entry.h>
 #include <cuda_runtime.h>
+#include <fusion/macros.h>
+#include <fusion/mapping/voxel.h>
+#include <fusion/mapping/hash_entry.h>
 
 #define BLOCK_SIZE 8
 #define BLOCK_SIZE3 512

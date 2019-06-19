@@ -1,8 +1,8 @@
-#include "map_proc.h"
+#include <fusion/mapping/map_struct.h>
 #include <fusion/math/matrices.h>
 #include <fusion/math/vectors.h>
-#include "cuda_utils.h"
-#include "prefix_sum.h"
+#include <fusion/core/cuda_utils.h>
+#include <fusion/mapping/prefix_sum.h>
 #include <opencv2/opencv.hpp>
 
 #define RENDERING_BLOCK_SIZE_X 16

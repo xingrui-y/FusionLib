@@ -1,7 +1,7 @@
 #ifndef FUSION_MAPPING_HASH_ENTRY_H
 #define FUSION_MAPPING_HASH_ENTRY_H
 
-#include <macros.h>
+#include <fusion/macros.h>
 #include <fusion/math/matrices.h>
 #include <fusion/math/vectors.h>
 #include <cuda_runtime_api.h>

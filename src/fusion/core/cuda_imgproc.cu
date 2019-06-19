@@ -1,8 +1,8 @@
-#include "cuda_imgproc.h"
-#include "cuda_utils.h"
+#include <fusion/core/cuda_imgproc.h>
+#include <fusion/core/cuda_utils.h>
 #include <fusion/math/matrices.h>
 #include <fusion/math/vectors.h>
-#include "intrinsic_matrix.h"
+#include <fusion/core/intrinsic_matrix.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudawarping.hpp>
 

@@ -1,8 +1,8 @@
 #ifndef __SE3_REDUCTION__
 #define __SE3_REDUCTION__
 
-#include "intrinsic_matrix.h"
-#include "sophus/se3.hpp"
+#include <sophus/se3.hpp>
+#include <fusion/core/intrinsic_matrix.h>
 #include <opencv2/cudaarithm.hpp>
 #include <thrust/device_vector.h>
 

@@ -1,8 +1,8 @@
-#include "pose_estimator.h"
 #include <fusion/math/matrices.h>
 #include <fusion/math/vectors.h>
-#include "cuda_utils.h"
-#include "reduce_sum.h"
+#include <fusion/icp/pose_estimator.h>
+#include <fusion/core/cuda_utils.h>
+#include <fusion/icp/reduce_sum.h>
 #include <thrust/device_vector.h>
 
 namespace fusion

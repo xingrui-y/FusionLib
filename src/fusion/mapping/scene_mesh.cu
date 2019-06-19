@@ -1,9 +1,9 @@
-#include "map_proc.h"
+#include <fusion/mapping/map_proc.h>
 #include <fusion/math/matrices.h>
 #include <fusion/math/vectors.h>
-#include "cuda_utils.h"
-#include "prefix_sum.h"
-#include "cuda_constants.h"
+#include <fusion/core/cuda_utils.h>
+#include <fusion/mapping/prefix_sum.h>
+#include <fusion/mapping/cuda_constants.h>
 
 namespace fusion
 {

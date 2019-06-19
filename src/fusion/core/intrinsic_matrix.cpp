@@ -1,5 +1,5 @@
-#include "intrinsic_matrix.h"
 #include <iostream>
+#include <fusion/core/intrinsic_matrix.h>
 
 namespace fusion
 {

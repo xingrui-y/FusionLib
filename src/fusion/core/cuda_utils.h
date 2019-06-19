@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <cuda_runtime.h>
-#include <intrinsic_matrix.h>
+#include <fusion/core/intrinsic_matrix.h>
 
 #define MAX_THREAD 1024
 #define MAX_WARP_SIZE 32

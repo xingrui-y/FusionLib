@@ -1,8 +1,8 @@
 #ifndef FUSION_VOXEL_HASHING_MAP_PROC
 #define FUSION_VOXEL_HASHING_MAP_PROC
 
-#include "map_struct.h"
-#include "intrinsic_matrix.h"
+#include <fusion/mapping/map_struct.h>
+#include <fusion/core/intrinsic_matrix.h>
 #include <sophus/se3.hpp>
 #include <opencv2/cudaarithm.hpp>
 #include <thrust/device_vector.h>
