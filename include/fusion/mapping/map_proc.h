@@ -74,7 +74,7 @@ void create_mesh_vertex_only(
     uint &block_count,
     HashEntry *block_list,
     uint &triangle_count,
-    float3 *vertex_data);
+    void *vertex_data);
 
 void create_mesh_with_normal(
     MapStorage map_struct,
@@ -82,8 +82,8 @@ void create_mesh_with_normal(
     uint &block_count,
     HashEntry *block_list,
     uint &triangle_count,
-    float3 *vertex_data,
-    float3 *vertex_normal);
+    void *vertex_data,
+    void *vertex_normal);
 
 void create_mesh_with_colour(
     MapStorage map_struct,
@@ -91,8 +91,8 @@ void create_mesh_with_colour(
     uint &block_count,
     HashEntry *block_list,
     uint &triangle_count,
-    float3 *vertex_data,
-    uchar3 *vertex_colour);
+    void *vertex_data,
+    void *vertex_colour);
 
 } // namespace cuda
 } // namespace fusion

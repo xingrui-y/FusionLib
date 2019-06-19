@@ -11,7 +11,7 @@ struct RgbReduction
 {
     __device__ bool find_corresp(int &x, int &y)
     {
-        float4 pt = last_vmap.ptr(y)[x];
+        Vector4f pt = last_vmap.ptr(y)[x];
         if (pt.w < 0 || isnan(pt.x))
             return false;
 
@@ -19,7 +19,7 @@ struct RgbReduction
         if (!isfinite(i_l))
             return false;
 
-        p_transformed = pose(ToFloat3(pt));
+        p_transformed = pose(ToVector3(pt));
         u0 = p_transformed.x / p_transformed.z * fx + cx;
         v0 = p_transformed.y / p_transformed.z * fy + cy;
         if (u0 >= 2 && u0 < cols - 2 && v0 >= 2 && v0 < rows - 2)
@@ -52,15 +52,15 @@ struct RgbReduction
 
         if (corresp_found)
         {
-            float3 left;
+            Vector3f left;
             float z_inv = 1.0 / p_transformed.z;
             left.x = dx * fx * z_inv;
             left.y = dy * fy * z_inv;
             left.z = -(left.x * p_transformed.x + left.y * p_transformed.y) * z_inv;
             row[6] = i_l - i_c;
 
-            *(float3 *)&row[0] = left;
-            *(float3 *)&row[3] = cross(p_transformed, left);
+            *(Vector3f *)&row[0] = left;
+            *(Vector3f *)&row[3] = p_transformed.cross(left);
         }
 
         int count = 0;
@@ -101,11 +101,11 @@ struct RgbReduction
     float u0, v0;
     DeviceMatrix3x4 pose;
     float fx, fy, cx, cy, invfx, invfy;
-    cv::cuda::PtrStep<float4> point_cloud, last_vmap;
+    cv::cuda::PtrStep<Vector4f> point_cloud, last_vmap;
     cv::cuda::PtrStep<float> last_image, curr_image;
     cv::cuda::PtrStep<float> dIdx, dIdy;
     cv::cuda::PtrStep<float> out;
-    float3 p_transformed, p_last;
+    Vector3f p_transformed, p_last;
 
 private:
     float i_c, i_l, dx, dy;
@@ -169,9 +169,9 @@ void rgb_reduce(const cv::cuda::GpuMat &curr_intensity,
 
 struct ICPReduction
 {
-    __device__ __inline__ bool searchPoint(int &x, int &y, float3 &vcurr_g, float3 &vlast_g, float3 &nlast_g) const
+    __device__ __inline__ bool searchPoint(int &x, int &y, Vector3f &vcurr_g, Vector3f &vlast_g, Vector3f &nlast_g) const
     {
-        float3 vlast_c = ToFloat3(last_vmap_.ptr(y)[x]);
+        Vector3f vlast_c = ToVector3(last_vmap_.ptr(y)[x]);
         if (isnan(vlast_c.x))
             return false;
 
@@ -183,15 +183,15 @@ struct ICPReduction
         if (u < 0 || v < 0 || u >= cols || v >= rows)
             return false;
 
-        vcurr_g = ToFloat3(curr_vmap_.ptr(v)[u]);
+        vcurr_g = ToVector3(curr_vmap_.ptr(v)[u]);
 
-        float3 nlast_c = ToFloat3(last_nmap_.ptr(y)[x]);
+        Vector3f nlast_c = ToVector3(last_nmap_.ptr(y)[x]);
         nlast_g = pose.rotate(nlast_c);
 
-        float3 ncurr_g = ToFloat3(curr_nmap_.ptr(v)[u]);
+        Vector3f ncurr_g = ToVector3(curr_nmap_.ptr(v)[u]);
 
-        float dist = norm(vlast_g - vcurr_g);
-        float sine = norm(cross(ncurr_g, nlast_g));
+        float dist = (vlast_g - vcurr_g).norm();
+        float sine = ncurr_g.cross(nlast_g).norm();
 
         return (sine < angleThresh && dist <= distThresh && !isnan(ncurr_g.x) && !isnan(nlast_g.x));
     }
@@ -202,14 +202,14 @@ struct ICPReduction
         int x = i - y * cols;
 
         bool found = false;
-        float3 vcurr, vlast, nlast;
+        Vector3f vcurr, vlast, nlast;
         found = searchPoint(x, y, vcurr, vlast, nlast);
         float row[7] = {0, 0, 0, 0, 0, 0, 0};
 
         if (found)
         {
-            *(float3 *)&row[0] = nlast;
-            *(float3 *)&row[3] = cross(vlast, nlast);
+            *(Vector3f *)&row[0] = nlast;
+            *(Vector3f *)&row[3] = vlast.cross(nlast);
             row[6] = nlast * (vcurr - vlast);
         }
 
@@ -255,8 +255,8 @@ struct ICPReduction
     }
 
     DeviceMatrix3x4 pose;
-    cv::cuda::PtrStep<float4> curr_vmap_, last_vmap_;
-    cv::cuda::PtrStep<float4> curr_nmap_, last_nmap_;
+    cv::cuda::PtrStep<Vector4f> curr_vmap_, last_vmap_;
+    cv::cuda::PtrStep<Vector4f> curr_nmap_, last_nmap_;
     int cols, rows, N;
     float fx, fy, cx, cy;
     float angleThresh, distThresh;

@@ -8,15 +8,15 @@
 struct FUSION_EXPORT HashEntry
 {
     FUSION_HOST_AND_DEVICE inline HashEntry();
-    FUSION_HOST_AND_DEVICE inline HashEntry(int3 pos, int next, int offset);
+    FUSION_HOST_AND_DEVICE inline HashEntry(Vector3i pos, int next, int offset);
     FUSION_HOST_AND_DEVICE inline HashEntry(const HashEntry &);
     FUSION_HOST_AND_DEVICE inline HashEntry &operator=(const HashEntry &);
-    FUSION_HOST_AND_DEVICE inline bool operator==(const int3 &) const;
+    FUSION_HOST_AND_DEVICE inline bool operator==(const Vector3i &) const;
     FUSION_HOST_AND_DEVICE inline bool operator==(const HashEntry &) const;
 
     int ptr_;
     int offset_;
-    int3 pos_;
+    Vector3i pos_;
 };
 
 FUSION_HOST_AND_DEVICE inline HashEntry::HashEntry()
@@ -24,7 +24,7 @@ FUSION_HOST_AND_DEVICE inline HashEntry::HashEntry()
 {
 }
 
-FUSION_HOST_AND_DEVICE inline HashEntry::HashEntry(int3 pos, int ptr, int offset)
+FUSION_HOST_AND_DEVICE inline HashEntry::HashEntry(Vector3i pos, int ptr, int offset)
     : pos_(pos), ptr_(ptr), offset_(offset)
 {
 }
@@ -42,7 +42,7 @@ FUSION_HOST_AND_DEVICE inline HashEntry &HashEntry::operator=(const HashEntry &o
     return *this;
 }
 
-FUSION_HOST_AND_DEVICE inline bool HashEntry::operator==(const int3 &pos) const
+FUSION_HOST_AND_DEVICE inline bool HashEntry::operator==(const Vector3i &pos) const
 {
     return this->pos_ == pos;
 }

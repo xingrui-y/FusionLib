@@ -117,7 +117,7 @@ FUSION_DEVICE void unlock_bucket(int *mutex)
     atomicExch(mutex, 0);
 }
 
-FUSION_DEVICE int compute_hash(const int3 &pos)
+FUSION_DEVICE int compute_hash(const Vector3i &pos)
 {
     int res = ((pos.x * 73856093) ^ (pos.y * 19349669) ^ (pos.z * 83492791)) % param.num_total_buckets_;
     if (res < 0)
@@ -142,7 +142,7 @@ FUSION_DEVICE bool DeleteHashEntry(MapStorage &map, HashEntry &current)
     }
 }
 
-FUSION_DEVICE bool CreateHashEntry(MapStorage &map, const int3 &pos, const int &offset, HashEntry *entry)
+FUSION_DEVICE bool CreateHashEntry(MapStorage &map, const Vector3i &pos, const int &offset, HashEntry *entry)
 {
     int old = atomicSub(map.heap_mem_counter_, 1);
     if (old >= 0)
@@ -162,7 +162,7 @@ FUSION_DEVICE bool CreateHashEntry(MapStorage &map, const int3 &pos, const int &
     return false;
 }
 
-FUSION_DEVICE void create_block(MapStorage &map, const int3 &block_pos, int &bucket_index)
+FUSION_DEVICE void create_block(MapStorage &map, const Vector3i &block_pos, int &bucket_index)
 {
     bucket_index = compute_hash(block_pos);
     int *mutex = &map.bucket_mutex_[bucket_index];
@@ -247,7 +247,7 @@ FUSION_DEVICE void delete_block(MapStorage &map, HashEntry &current)
     }
 }
 
-FUSION_DEVICE void find_voxel(const MapStorage &map, const int3 &voxel_pos, Voxel *&out)
+FUSION_DEVICE void find_voxel(const MapStorage &map, const Vector3i &voxel_pos, Voxel *&out)
 {
     HashEntry *current;
     find_entry(map, voxel_pos_to_block_pos(voxel_pos), current);
@@ -255,7 +255,7 @@ FUSION_DEVICE void find_voxel(const MapStorage &map, const int3 &voxel_pos, Voxe
         out = &map.voxels_[current->ptr_ + voxel_pos_to_local_idx(voxel_pos)];
 }
 
-FUSION_DEVICE void find_entry(const MapStorage &map, const int3 &block_pos, HashEntry *&out)
+FUSION_DEVICE void find_entry(const MapStorage &map, const Vector3i &block_pos, HashEntry *&out)
 {
     uint bucket_idx = compute_hash(block_pos);
     out = &map.hash_table_[bucket_idx];
@@ -466,18 +466,18 @@ FUSION_HOST void MapStruct<Device>::readFromDisk(std::string file_name, const bo
     }
 }
 
-FUSION_DEVICE int3 world_pt_to_voxel_pos(float3 pt)
+FUSION_DEVICE Vector3i world_pt_to_voxel_pos(Vector3f pt)
 {
     pt = pt / param.voxel_size;
-    return ToInt3(pt);
+    return ToVector3i(pt);
 }
 
-FUSION_DEVICE float3 voxel_pos_to_world_pt(const int3 &voxel_pos)
+FUSION_DEVICE Vector3f voxel_pos_to_world_pt(const Vector3i &voxel_pos)
 {
     return (voxel_pos)*param.voxel_size;
 }
 
-FUSION_DEVICE int3 voxel_pos_to_block_pos(int3 voxel_pos)
+FUSION_DEVICE Vector3i voxel_pos_to_block_pos(Vector3i voxel_pos)
 {
     if (voxel_pos.x < 0)
         voxel_pos.x -= BLOCK_SIZE_SUB_1;
@@ -489,12 +489,12 @@ FUSION_DEVICE int3 voxel_pos_to_block_pos(int3 voxel_pos)
     return voxel_pos / BLOCK_SIZE;
 }
 
-FUSION_DEVICE int3 block_pos_to_voxel_pos(const int3 &block_pos)
+FUSION_DEVICE Vector3i block_pos_to_voxel_pos(const Vector3i &block_pos)
 {
     return block_pos * BLOCK_SIZE;
 }
 
-FUSION_DEVICE int3 voxel_pos_to_local_pos(int3 pos)
+FUSION_DEVICE Vector3i voxel_pos_to_local_pos(Vector3i pos)
 {
     pos = pos % BLOCK_SIZE;
 
@@ -508,20 +508,20 @@ FUSION_DEVICE int3 voxel_pos_to_local_pos(int3 pos)
     return pos;
 }
 
-FUSION_DEVICE int local_pos_to_local_idx(const int3 &pos)
+FUSION_DEVICE int local_pos_to_local_idx(const Vector3i &pos)
 {
     return pos.z * BLOCK_SIZE * BLOCK_SIZE + pos.y * BLOCK_SIZE + pos.x;
 }
 
-FUSION_DEVICE int3 local_idx_to_local_pos(const int &idx)
+FUSION_DEVICE Vector3i local_idx_to_local_pos(const int &idx)
 {
     uint x = idx % BLOCK_SIZE;
     uint y = idx % (BLOCK_SIZE * BLOCK_SIZE) / BLOCK_SIZE;
     uint z = idx / (BLOCK_SIZE * BLOCK_SIZE);
-    return ToInt3(x, y, z);
+    return Vector3i(x, y, z);
 }
 
-FUSION_DEVICE int voxel_pos_to_local_idx(const int3 &pos)
+FUSION_DEVICE int voxel_pos_to_local_idx(const Vector3i &pos)
 {
     return local_pos_to_local_idx(voxel_pos_to_local_pos(pos));
 }

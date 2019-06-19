@@ -81,7 +81,7 @@ void build_intensity_derivative_pyramid(const std::vector<cv::cuda::GpuMat> &int
     }
 }
 
-__global__ void back_project_kernel(const cv::cuda::PtrStepSz<float> depth, cv::cuda::PtrStep<float4> vmap, DeviceIntrinsicMatrix intrinsics)
+__global__ void back_project_kernel(const cv::cuda::PtrStepSz<float> depth, cv::cuda::PtrStep<Vector4f> vmap, DeviceIntrinsicMatrix intrinsics)
 {
     const int x = threadIdx.x + blockDim.x * blockIdx.x;
     const int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -91,7 +91,7 @@ __global__ void back_project_kernel(const cv::cuda::PtrStepSz<float> depth, cv::
     float z = depth.ptr(y)[x];
     z = (z == z) ? z : nanf("NAN");
 
-    vmap.ptr(y)[x] = ToFloat4(z * (x - intrinsics.cx) * intrinsics.invfx, z * (y - intrinsics.cy) * intrinsics.invfy, z, 1.0f);
+    vmap.ptr(y)[x] = Vector4f(z * (x - intrinsics.cx) * intrinsics.invfx, z * (y - intrinsics.cy) * intrinsics.invfy, z, 1.0f);
 }
 
 void build_point_cloud_pyramid(const std::vector<cv::cuda::GpuMat> &depth_pyr, std::vector<cv::cuda::GpuMat> &point_cloud_pyr, const IntrinsicMatrixPyramidPtr intrinsics_pyr)
@@ -118,7 +118,7 @@ void build_point_cloud_pyramid(const std::vector<cv::cuda::GpuMat> &depth_pyr, s
     }
 }
 
-__global__ void compute_nmap_kernel(cv::cuda::PtrStepSz<float4> vmap, cv::cuda::PtrStep<float4> nmap)
+__global__ void compute_nmap_kernel(cv::cuda::PtrStepSz<Vector4f> vmap, cv::cuda::PtrStep<Vector4f> nmap)
 {
     const int x = threadIdx.x + blockDim.x * blockIdx.x;
     const int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -130,12 +130,12 @@ __global__ void compute_nmap_kernel(cv::cuda::PtrStepSz<float4> vmap, cv::cuda::
     int y10 = max(y - 1, 0);
     int y01 = min(y + 1, vmap.rows);
 
-    float4 v00 = vmap.ptr(y)[x10];
-    float4 v01 = vmap.ptr(y)[x01];
-    float4 v10 = vmap.ptr(y10)[x];
-    float4 v11 = vmap.ptr(y01)[x];
+    Vector3f v00 = ToVector3(vmap.ptr(y)[x10]);
+    Vector3f v01 = ToVector3(vmap.ptr(y)[x01]);
+    Vector3f v10 = ToVector3(vmap.ptr(y10)[x]);
+    Vector3f v11 = ToVector3(vmap.ptr(y01)[x]);
 
-    nmap.ptr(y)[x] = ToFloat4(normalised(cross(v01 - v00, v11 - v10)), 1.f);
+    nmap.ptr(y)[x] = Vector4f(normalised((v01 - v00).cross(v11 - v10)), 1.f);
 }
 
 void build_normal_pyramid(const std::vector<cv::cuda::GpuMat> &vmap_pyr, std::vector<cv::cuda::GpuMat> &nmap_pyr)
@@ -167,27 +167,27 @@ void resize_device_map(std::vector<cv::cuda::GpuMat> &map_pyr)
     }
 }
 
-__global__ void render_scene_kernel(const cv::cuda::PtrStep<float4> vmap, const cv::cuda::PtrStep<float4> nmap, const float3 light_pos, cv::cuda::PtrStepSz<uchar4> dst)
+__global__ void render_scene_kernel(const cv::cuda::PtrStep<Vector4f> vmap, const cv::cuda::PtrStep<Vector4f> nmap, const Vector3f light_pos, cv::cuda::PtrStepSz<uchar4> dst)
 {
     const int x = threadIdx.x + blockIdx.x * blockDim.x;
     const int y = threadIdx.y + blockIdx.y * blockDim.y;
     if (x >= dst.cols || y >= dst.rows)
         return;
 
-    float3 color;
-    float3 point = ToFloat3(vmap.ptr(y)[x]);
+    Vector3f color;
+    Vector3f point = ToVector3(vmap.ptr(y)[x]);
     if (isnan(point.x))
     {
-        const float3 bgr1 = ToFloat3(4.f / 255.f, 2.f / 255.f, 2.f / 255.f);
-        // const float3 bgr2 = ToFloat3(120.f / 255.f, 120.f / 255.f, 236.f / 255.f);
-        const float3 bgr2 = ToFloat3(0, 0, 0);
+        const Vector3f bgr1 = Vector3f(4.f / 255.f, 2.f / 255.f, 2.f / 255.f);
+        // const Vector3f bgr2 = ToVector3(120.f / 255.f, 120.f / 255.f, 236.f / 255.f);
+        const Vector3f bgr2 = Vector3f(0, 0, 0);
         float w = static_cast<float>(y) / dst.rows;
         color = bgr1 * (1 - w) + bgr2 * w;
     }
     else
     {
-        float3 P = point;
-        float3 N = ToFloat3(nmap.ptr(y)[x]);
+        Vector3f P = point;
+        Vector3f N = ToVector3(nmap.ptr(y)[x]);
 
         const float Ka = 0.3f; //ambient coeff
         const float Kd = 0.5f; //diffuse coeff
@@ -199,12 +199,12 @@ __global__ void render_scene_kernel(const cv::cuda::PtrStep<float4> vmap, const 
         const float Sx = 1.f; //specular color, can be RGB
         const float Lx = 1.f; //light color
 
-        float3 L = normalised(light_pos - P);
-        float3 V = normalised(ToFloat3(0.f, 0.f, 0.f) - P);
-        float3 R = normalised(2 * N * (N * L) - L);
+        Vector3f L = normalised(light_pos - P);
+        Vector3f V = normalised(Vector3f(0.f, 0.f, 0.f) - P);
+        Vector3f R = normalised(2 * N * (N * L) - L);
 
         float Ix = Ax * Ka * Dx + Lx * Kd * Dx * fmax(0.f, (N * L)) + Lx * Ks * Sx * pow(fmax(0.f, (R * V)), n);
-        color = ToFloat3(Ix, Ix, Ix);
+        color = Vector3f(Ix, Ix, Ix);
     }
 
     uchar4 out;
@@ -228,13 +228,13 @@ void render_scene(const cv::cuda::GpuMat vmap, const cv::cuda::GpuMat nmap, cv::
     if (image.empty())
         image.create(vmap.rows, vmap.cols, CV_8UC4);
 
-    render_scene_kernel<<<block, thread>>>(vmap, nmap, ToFloat3(5, 5, 5), image);
+    render_scene_kernel<<<block, thread>>>(vmap, nmap, Vector3f(5, 5, 5), image);
 }
 
-__global__ void render_scene_textured_kernel(const cv::cuda::PtrStep<float4> vmap,
-                                             const cv::cuda::PtrStep<float4> nmap,
-                                             const cv::cuda::PtrStep<uchar3> image,
-                                             const float3 light_pos,
+__global__ void render_scene_textured_kernel(const cv::cuda::PtrStep<Vector4f> vmap,
+                                             const cv::cuda::PtrStep<Vector4f> nmap,
+                                             const cv::cuda::PtrStep<Vector3c> image,
+                                             const Vector3f light_pos,
                                              cv::cuda::PtrStepSz<uchar4> dst)
 {
     const int x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -242,21 +242,21 @@ __global__ void render_scene_textured_kernel(const cv::cuda::PtrStep<float4> vma
     if (x >= dst.cols || y >= dst.rows)
         return;
 
-    float3 color;
-    float3 point = ToFloat3(vmap.ptr(y)[x]);
-    float3 pixel = ToFloat3(image.ptr(y)[x]) / 255.f;
+    Vector3f color;
+    Vector3f point = ToVector3(vmap.ptr(y)[x]);
+    Vector3f pixel = ToVector3f(image.ptr(y)[x]) / 255.f;
     if (isnan(point.x))
     {
-        const float3 bgr1 = ToFloat3(4.f / 255.f, 2.f / 255.f, 2.f / 255.f);
-        const float3 bgr2 = ToFloat3(236.f / 255.f, 120.f / 255.f, 120.f / 255.f);
+        const Vector3f bgr1 = Vector3f(4.f / 255.f, 2.f / 255.f, 2.f / 255.f);
+        const Vector3f bgr2 = Vector3f(236.f / 255.f, 120.f / 255.f, 120.f / 255.f);
 
         float w = static_cast<float>(y) / dst.rows;
         color = bgr1 * (1 - w) + bgr2 * w;
     }
     else
     {
-        float3 P = point;
-        float3 N = ToFloat3(nmap.ptr(y)[x]);
+        Vector3f P = point;
+        Vector3f N = ToVector3(nmap.ptr(y)[x]);
 
         const float Ka = 0.3f; //ambient coeff
         const float Kd = 0.5f; //diffuse coeff
@@ -268,14 +268,14 @@ __global__ void render_scene_textured_kernel(const cv::cuda::PtrStep<float4> vma
         // const float Sx = 1.f;
         const float Lx = 2.f; //light color
 
-        float3 L = normalised(light_pos - P);
-        float3 V = normalised(ToFloat3(0.f, 0.f, 0.f) - P);
-        float3 R = normalised(2 * N * (N * L) - L);
+        Vector3f L = normalised(light_pos - P);
+        Vector3f V = normalised(Vector3f(0.f, 0.f, 0.f) - P);
+        Vector3f R = normalised(2 * N * (N * L) - L);
 
         float Ix = pixel.x * Ka * pixel.x + Lx * Kd * pixel.x * fmax(0.f, (N * L)) + Lx * Ks * pixel.x * pow(fmax(0.f, (R * V)), n);
         float Iy = pixel.y * Ka * pixel.y + Lx * Kd * pixel.y * fmax(0.f, (N * L)) + Lx * Ks * pixel.y * pow(fmax(0.f, (R * V)), n);
         float Iz = pixel.z * Ka * pixel.z + Lx * Kd * pixel.z * fmax(0.f, (N * L)) + Lx * Ks * pixel.z * pow(fmax(0.f, (R * V)), n);
-        color = ToFloat3(Ix, Iy, Iz);
+        color = Vector3f(Ix, Iy, Iz);
     }
 
     uchar4 out;
@@ -294,7 +294,7 @@ void render_scene_textured(const cv::cuda::GpuMat vmap, const cv::cuda::GpuMat n
     if (out.empty())
         out.create(vmap.rows, vmap.cols, CV_8UC4);
 
-    render_scene_textured_kernel<<<block, thread>>>(vmap, nmap, image, ToFloat3(5, 5, 5), out);
+    render_scene_textured_kernel<<<block, thread>>>(vmap, nmap, image, Vector3f(5, 5, 5), out);
 }
 
 __global__ void convert_image_to_semi_dense_kernel(const cv::cuda::PtrStepSz<float> image,
@@ -341,28 +341,28 @@ void build_semi_dense_pyramid(const std::vector<cv::cuda::GpuMat> image_pyr, con
     }
 }
 
-__device__ inline uchar3 interpolate_bilinear(const cv::cuda::PtrStepSz<uchar3> image, float x, float y)
+__device__ inline Vector3c interpolate_bilinear(const cv::cuda::PtrStepSz<Vector3c> image, float x, float y)
 {
     int u = floor(x), v = floor(y);
     float coeff_x = x - (float)u, coeff_y = y - (float)v;
-    float3 result = (image.ptr(v)[u] * (1 - coeff_x) + image.ptr(v)[u + 1] * coeff_x) * (1 - coeff_y) +
-                    (image.ptr(v + 1)[u] * (1 - coeff_x) + image.ptr(v + 1)[u + 1] * coeff_x) * coeff_y;
-    return ToUChar3(result);
+    Vector3f result = ToVector3f((image.ptr(v)[u] * (1 - coeff_x) + image.ptr(v)[u + 1] * coeff_x) * (1 - coeff_y) +
+                    (image.ptr(v + 1)[u] * (1 - coeff_x) + image.ptr(v + 1)[u + 1] * coeff_x) * coeff_y);
+    return ToVector3c(result);
 }
 
-__global__ void warp_image_kernel(const cv::cuda::PtrStepSz<uchar3> src,
-                                  const cv::cuda::PtrStep<float4> vmap_dst,
+__global__ void warp_image_kernel(const cv::cuda::PtrStepSz<Vector3c> src,
+                                  const cv::cuda::PtrStep<Vector4f> vmap_dst,
                                   const DeviceMatrix3x4 pose,
                                   const DeviceIntrinsicMatrix K,
-                                  cv::cuda::PtrStep<uchar3> dst)
+                                  cv::cuda::PtrStep<Vector3c> dst)
 {
     const int x = threadIdx.x + blockIdx.x * blockDim.x;
     const int y = threadIdx.y + blockIdx.y * blockDim.y;
     if (x >= src.cols || y >= src.rows)
         return;
 
-    dst.ptr(y)[x] = ToUChar3(0);
-    float3 dst_pt_src = pose(ToFloat3(vmap_dst.ptr(y)[x]));
+    dst.ptr(y)[x] = ToVector3c(0);
+    Vector3f dst_pt_src = pose(ToVector3(vmap_dst.ptr(y)[x]));
 
     float u = K.fx * dst_pt_src.x / dst_pt_src.z + K.cx;
     float v = K.fy * dst_pt_src.y / dst_pt_src.z + K.cy;

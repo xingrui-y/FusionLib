@@ -14,7 +14,7 @@ struct FUSION_EXPORT Voxel
 
     short sdf;
     float weight;
-    uchar3 rgb;
+    Vector3c rgb;
 };
 
 FUSION_DEVICE inline float unpack_float(short val)

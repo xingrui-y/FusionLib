@@ -27,9 +27,9 @@ struct RenderingBlockDelegate
     mutable cv::cuda::PtrStep<float> zrange_y;
     RenderingBlock *rendering_blocks;
 
-    __device__ __forceinline__ float2 project(const float3 &pt) const
+    __device__ __forceinline__ Vector2f project(const Vector3f &pt) const
     {
-        return make_float2(fx * pt.x / pt.z + cx, fy * pt.y / pt.z + cy);
+        return Vector2f(fx * pt.x / pt.z + cx, fy * pt.y / pt.z + cy);
     }
 
     // compare val with the old value stored in *add
@@ -58,24 +58,24 @@ struct RenderingBlockDelegate
         } while (assumed != old);
     }
 
-    __device__ __forceinline__ bool create_rendering_block(const int3 &block_pos, RenderingBlock &block) const
+    __device__ __forceinline__ bool create_rendering_block(const Vector3i &block_pos, RenderingBlock &block) const
     {
-        block.upper_left = make_short2(zrange_x.cols, zrange_x.rows);
-        block.lower_right = make_short2(-1, -1);
-        block.zrange = make_float2(param.zmax_raycast, param.zmin_raycast);
+        block.upper_left = Vector2s(zrange_x.cols, zrange_x.rows);
+        block.lower_right = Vector2s(-1, -1);
+        block.zrange = Vector2f(param.zmax_raycast, param.zmin_raycast);
 
 #pragma unroll
         for (int corner = 0; corner < 8; ++corner)
         {
-            int3 tmp = block_pos;
+            Vector3i tmp = block_pos;
             tmp.x += (corner & 1) ? 1 : 0;
             tmp.y += (corner & 2) ? 1 : 0;
             tmp.z += (corner & 4) ? 1 : 0;
 
-            float3 pt3d = tmp * param.block_size_metric();
+            Vector3f pt3d = tmp * param.block_size_metric();
             pt3d = inv_pose(pt3d);
 
-            float2 pt2d = project(pt3d) / RENDERING_BLOCK_SUBSAMPLE;
+            Vector2f pt2d = project(pt3d) / RENDERING_BLOCK_SUBSAMPLE;
 
             if (block.upper_left.x > floor(pt2d.x))
                 block.upper_left.x = (int)floor(pt2d.x);
@@ -163,8 +163,8 @@ struct RenderingBlockDelegate
             valid = create_rendering_block(visible_block_pos[x].pos_, block);
             float dx = (float)block.lower_right.x - block.upper_left.x + 1;
             float dy = (float)block.lower_right.y - block.upper_left.y + 1;
-            nx = __float2int_ru(dx / RENDERING_BLOCK_SIZE_X);
-            ny = __float2int_ru(dy / RENDERING_BLOCK_SIZE_Y);
+            nx = __float2int_rd(dx / RENDERING_BLOCK_SIZE_X);
+            ny = __float2int_rd(dy / RENDERING_BLOCK_SIZE_Y);
 
             if (valid)
             {
@@ -278,17 +278,18 @@ struct MapRenderingDelegate
 {
     int width, height;
     MapStorage map_struct;
-    mutable cv::cuda::PtrStep<float4> vmap;
-    mutable cv::cuda::PtrStep<float4> nmap;
+    mutable cv::cuda::PtrStep<Vector4f> vmap;
+    mutable cv::cuda::PtrStep<Vector4f> nmap;
+    mutable cv::cuda::PtrStep<Vector3c> image;
     cv::cuda::PtrStepSz<float> zrange_x;
     cv::cuda::PtrStepSz<float> zrange_y;
     float invfx, invfy, cx, cy;
     DeviceMatrix3x4 pose, inv_pose;
 
-    __device__ __forceinline__ float read_sdf(const float3 &pt3d, bool &valid)
+    __device__ __forceinline__ float read_sdf(const Vector3f &pt3d, bool &valid)
     {
         Voxel *voxel = NULL;
-        find_voxel(map_struct, ToInt3(pt3d), voxel);
+        find_voxel(map_struct, ToVector3i(pt3d), voxel);
         if (voxel && voxel->weight != 0)
         {
             valid = true;
@@ -301,33 +302,33 @@ struct MapRenderingDelegate
         }
     }
 
-    __device__ __forceinline__ float read_sdf_interped(const float3 &pt, bool &valid)
+    __device__ __forceinline__ float read_sdf_interped(const Vector3f &pt, bool &valid)
     {
-        float3 xyz = pt - floor(pt);
+        Vector3f xyz = pt - floor(pt);
         float sdf[2], result[4];
         bool valid_pt;
 
         sdf[0] = read_sdf(pt, valid_pt);
-        sdf[1] = read_sdf(pt + make_float3(1, 0, 0), valid);
+        sdf[1] = read_sdf(pt + Vector3f(1, 0, 0), valid);
         valid_pt &= valid;
         result[0] = (1.0f - xyz.x) * sdf[0] + xyz.x * sdf[1];
 
-        sdf[0] = read_sdf(pt + make_float3(0, 1, 0), valid);
+        sdf[0] = read_sdf(pt + Vector3f(0, 1, 0), valid);
         valid_pt &= valid;
-        sdf[1] = read_sdf(pt + make_float3(1, 1, 0), valid);
+        sdf[1] = read_sdf(pt + Vector3f(1, 1, 0), valid);
         valid_pt &= valid;
         result[1] = (1.0f - xyz.x) * sdf[0] + xyz.x * sdf[1];
         result[2] = (1.0f - xyz.y) * result[0] + xyz.y * result[1];
 
-        sdf[0] = read_sdf(pt + make_float3(0, 0, 1), valid);
+        sdf[0] = read_sdf(pt + Vector3f(0, 0, 1), valid);
         valid_pt &= valid;
-        sdf[1] = read_sdf(pt + make_float3(1, 0, 1), valid);
+        sdf[1] = read_sdf(pt + Vector3f(1, 0, 1), valid);
         valid_pt &= valid;
         result[0] = (1.0f - xyz.x) * sdf[0] + xyz.x * sdf[1];
 
-        sdf[0] = read_sdf(pt + make_float3(0, 1, 1), valid);
+        sdf[0] = read_sdf(pt + Vector3f(0, 1, 1), valid);
         valid_pt &= valid;
-        sdf[1] = read_sdf(pt + make_float3(1, 1, 1), valid);
+        sdf[1] = read_sdf(pt + Vector3f(1, 1, 1), valid);
         valid_pt &= valid;
         result[1] = (1.0f - xyz.x) * sdf[0] + xyz.x * sdf[1];
         result[3] = (1.0f - xyz.y) * result[0] + xyz.y * result[1];
@@ -335,9 +336,9 @@ struct MapRenderingDelegate
         return (1.0f - xyz.z) * result[2] + xyz.z * result[3];
     }
 
-    __device__ __forceinline__ float3 unproject(const int &x, const int &y, const float &z) const
+    __device__ __forceinline__ Vector3f unproject(const int &x, const int &y, const float &z) const
     {
-        return make_float3((x - cx) * invfx * z, (y - cy) * invfy * z, z);
+        return Vector3f((x - cx) * invfx * z, (y - cy) * invfy * z, z);
     }
 
     __device__ __forceinline__ void operator()()
@@ -347,13 +348,13 @@ struct MapRenderingDelegate
         if (x >= width || y >= height)
             return;
 
-        vmap.ptr(y)[x] = ToFloat4(__int_as_float(0x7fffffff));
+        vmap.ptr(y)[x] = Vector4f(__int_as_float(0x7fffffff));
 
-        int2 local_id;
+        Vector2i local_id;
         local_id.x = __float2int_rd((float)x / 8);
         local_id.y = __float2int_rd((float)y / 8);
 
-        float2 zrange;
+        Vector2f zrange;
         zrange.x = zrange_x.ptr(local_id.y)[local_id.x];
         zrange.y = zrange_y.ptr(local_id.y)[local_id.x];
         if (zrange.y < 1e-3 || zrange.x < 1e-3 || isnan(zrange.x) || isnan(zrange.y))
@@ -362,16 +363,16 @@ struct MapRenderingDelegate
         float sdf = 1.0f;
         float last_sdf;
 
-        float3 pt = unproject(x, y, zrange.x);
-        float dist_s = norm(pt) * param.inverse_voxel_size();
-        float3 block_s = pose(pt) * param.inverse_voxel_size();
+        Vector3f pt = unproject(x, y, zrange.x);
+        float dist_s = pt.norm() * param.inverse_voxel_size();
+        Vector3f block_s = pose(pt) * param.inverse_voxel_size();
 
         pt = unproject(x, y, zrange.y);
-        float dist_e = norm(pt) * param.inverse_voxel_size();
-        float3 block_e = pose(pt) * param.inverse_voxel_size();
+        float dist_e = pt.norm() * param.inverse_voxel_size();
+        Vector3f block_e = pose(pt) * param.inverse_voxel_size();
 
-        float3 dir = normalised(block_e - block_s);
-        float3 result = block_s;
+        Vector3f dir = normalised(block_e - block_s);
+        Vector3f result = block_s;
 
         bool valid_sdf = false;
         bool found_pt = false;
@@ -417,14 +418,14 @@ struct MapRenderingDelegate
         if (found_pt)
         {
             result = inv_pose(result * param.voxel_size);
-            vmap.ptr(y)[x] = ToFloat4(result, 1.0);
+            vmap.ptr(y)[x] = Vector4f(result.x, result.y ,result.z, 1.0);
         }
     }
 
-    __device__ __forceinline__ uchar3 read_colour(float3 pt3d, bool &valid)
+    __device__ __forceinline__ Vector3c read_colour(Vector3f pt3d, bool &valid)
     {
         Voxel *voxel = NULL;
-        find_voxel(map_struct, ToInt3(pt3d), voxel);
+        find_voxel(map_struct, ToVector3i(pt3d), voxel);
         if (voxel && voxel->weight != 0)
         {
             valid = true;
@@ -433,45 +434,45 @@ struct MapRenderingDelegate
         else
         {
             valid = false;
-            return ToUChar3(0);
+            return Vector3c(0);
         }
     }
 
-    __device__ __forceinline__ uchar3 read_colour_interpolated(float3 pt, bool &valid)
+    __device__ __forceinline__ Vector3c read_colour_interpolated(Vector3f pt, bool &valid)
     {
-        float3 xyz = pt - floor(pt);
-        uchar3 sdf[2];
-        float3 result[4];
+        Vector3f xyz = pt - floor(pt);
+        Vector3c sdf[2];
+        Vector3f result[4];
         bool valid_pt;
 
         sdf[0] = read_colour(pt, valid_pt);
-        sdf[1] = read_colour(pt + make_float3(1, 0, 0), valid);
+        sdf[1] = read_colour(pt + Vector3f(1, 0, 0), valid);
         valid_pt &= valid;
         result[0] = (1.0f - xyz.x) * sdf[0] + xyz.x * sdf[1];
 
-        sdf[0] = read_colour(pt + make_float3(0, 1, 0), valid);
+        sdf[0] = read_colour(pt + Vector3f(0, 1, 0), valid);
         valid_pt &= valid;
-        sdf[1] = read_colour(pt + make_float3(1, 1, 0), valid);
+        sdf[1] = read_colour(pt + Vector3f(1, 1, 0), valid);
         valid_pt &= valid;
         result[1] = (1.0f - xyz.x) * sdf[0] + xyz.x * sdf[1];
         result[2] = (1.0f - xyz.y) * result[0] + xyz.y * result[1];
 
-        sdf[0] = read_colour(pt + make_float3(0, 0, 1), valid);
+        sdf[0] = read_colour(pt + Vector3f(0, 0, 1), valid);
         valid_pt &= valid;
-        sdf[1] = read_colour(pt + make_float3(1, 0, 1), valid);
+        sdf[1] = read_colour(pt + Vector3f(1, 0, 1), valid);
         valid_pt &= valid;
         result[0] = (1.0f - xyz.x) * sdf[0] + xyz.x * sdf[1];
 
-        sdf[0] = read_colour(pt + make_float3(0, 1, 1), valid);
+        sdf[0] = read_colour(pt + Vector3f(0, 1, 1), valid);
         valid_pt &= valid;
-        sdf[1] = read_colour(pt + make_float3(1, 1, 1), valid);
+        sdf[1] = read_colour(pt + Vector3f(1, 1, 1), valid);
         valid_pt &= valid;
         result[1] = (1.0f - xyz.x) * sdf[0] + xyz.x * sdf[1];
         result[3] = (1.0f - xyz.y) * result[0] + xyz.y * result[1];
         valid = valid_pt;
-        return ToUChar3((1.0f - xyz.z) * result[2] + xyz.z * result[3]);
+        return ToVector3c((1.0f - xyz.z) * result[2] + xyz.z * result[3]);
     }
-    cv::cuda::PtrStep<uchar3> image;
+
     __device__ __forceinline__ void raycast_with_colour()
     {
         const int x = threadIdx.x + blockDim.x * blockIdx.x;
@@ -479,14 +480,14 @@ struct MapRenderingDelegate
         if (x >= width || y >= height)
             return;
 
-        vmap.ptr(y)[x] = ToFloat4(__int_as_float(0x7fffffff));
-        image.ptr(y)[x] = ToUChar3(255);
+        vmap.ptr(y)[x] = Vector4f(__int_as_float(0x7fffffff));
+        image.ptr(y)[x] = Vector3c(255);
 
-        int2 local_id;
+        Vector2i local_id;
         local_id.x = __float2int_rd((float)x / 8);
         local_id.y = __float2int_rd((float)y / 8);
 
-        float2 zrange;
+        Vector2f zrange;
         zrange.x = zrange_x.ptr(local_id.y)[local_id.x];
         zrange.y = zrange_y.ptr(local_id.y)[local_id.x];
         if (zrange.y < 1e-3 || zrange.x < 1e-3 || isnan(zrange.x) || isnan(zrange.y))
@@ -495,16 +496,16 @@ struct MapRenderingDelegate
         float sdf = 1.0f;
         float last_sdf;
 
-        float3 pt = unproject(x, y, zrange.x);
-        float dist_s = norm(pt) * param.inverse_voxel_size();
-        float3 block_s = pose(pt) * param.inverse_voxel_size();
+        Vector3f pt = unproject(x, y, zrange.x);
+        float dist_s = pt.norm() * param.inverse_voxel_size();
+        Vector3f block_s = pose(pt) * param.inverse_voxel_size();
 
         pt = unproject(x, y, zrange.y);
-        float dist_e = norm(pt) * param.inverse_voxel_size();
-        float3 block_e = pose(pt) * param.inverse_voxel_size();
+        float dist_e = pt.norm() * param.inverse_voxel_size();
+        Vector3f block_e = pose(pt) * param.inverse_voxel_size();
 
-        float3 dir = normalised(block_e - block_s);
-        float3 result = block_s;
+        Vector3f dir = normalised(block_e - block_s);
+        Vector3f result = block_s;
 
         bool valid_sdf = false;
         bool found_pt = false;
@@ -555,7 +556,7 @@ struct MapRenderingDelegate
                 return;
 
             result = inv_pose(result * param.voxel_size);
-            vmap.ptr(y)[x] = ToFloat4(result, 1.0);
+            vmap.ptr(y)[x] = Vector4f(result.x, result.y, result.z, 1.0f);
             image.ptr(y)[x] = rgb;
         }
     }

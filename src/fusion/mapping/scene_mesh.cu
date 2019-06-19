@@ -13,11 +13,11 @@ struct BuildVertexArray
 {
     MapStorage map_struct;
 
-    float3 *triangles;
+    Vector3f *triangles;
     HashEntry *block_array;
     uint *block_count;
     uint *triangle_count;
-    float3 *surface_normal;
+    Vector3f *surface_normal;
 
     __device__ __forceinline__ void select_blocks() const
     {
@@ -49,10 +49,10 @@ struct BuildVertexArray
         }
     }
 
-    __device__ __forceinline__ float read_sdf(float3 pt, bool &valid) const
+    __device__ __forceinline__ float read_sdf(Vector3f pt, bool &valid) const
     {
         Voxel *voxel = NULL;
-        find_voxel(map_struct, ToInt3(pt), voxel);
+        find_voxel(map_struct, ToVector3i(pt), voxel);
         if (voxel && voxel->weight != 0)
         {
             valid = true;
@@ -65,38 +65,38 @@ struct BuildVertexArray
         }
     }
 
-    __device__ __forceinline__ bool read_sdf_list(float *sdf, int3 pos) const
+    __device__ __forceinline__ bool read_sdf_list(float *sdf, Vector3i pos) const
     {
         bool valid = false;
-        sdf[0] = read_sdf(pos + make_float3(0, 0, 0), valid);
+        sdf[0] = read_sdf(pos + Vector3f(0, 0, 0), valid);
         if (!valid)
             return false;
 
-        sdf[1] = read_sdf(pos + make_float3(1, 0, 0), valid);
+        sdf[1] = read_sdf(pos + Vector3f(1, 0, 0), valid);
         if (!valid)
             return false;
 
-        sdf[2] = read_sdf(pos + make_float3(1, 1, 0), valid);
+        sdf[2] = read_sdf(pos + Vector3f(1, 1, 0), valid);
         if (!valid)
             return false;
 
-        sdf[3] = read_sdf(pos + make_float3(0, 1, 0), valid);
+        sdf[3] = read_sdf(pos + Vector3f(0, 1, 0), valid);
         if (!valid)
             return false;
 
-        sdf[4] = read_sdf(pos + make_float3(0, 0, 1), valid);
+        sdf[4] = read_sdf(pos + Vector3f(0, 0, 1), valid);
         if (!valid)
             return false;
 
-        sdf[5] = read_sdf(pos + make_float3(1, 0, 1), valid);
+        sdf[5] = read_sdf(pos + Vector3f(1, 0, 1), valid);
         if (!valid)
             return false;
 
-        sdf[6] = read_sdf(pos + make_float3(1, 1, 1), valid);
+        sdf[6] = read_sdf(pos + Vector3f(1, 1, 1), valid);
         if (!valid)
             return false;
 
-        sdf[7] = read_sdf(pos + make_float3(0, 1, 1), valid);
+        sdf[7] = read_sdf(pos + Vector3f(0, 1, 1), valid);
         if (!valid)
             return false;
 
@@ -114,7 +114,7 @@ struct BuildVertexArray
         return (0 - v1) / (v2 - v1);
     }
 
-    __device__ __forceinline__ int make_vertex(float3 *vertex_array, const int3 pos)
+    __device__ __forceinline__ int make_vertex(Vector3f *vertex_array, const Vector3i pos)
     {
         float sdf[8];
 
@@ -145,62 +145,62 @@ struct BuildVertexArray
         if (edge_table[cube_index] & 1)
         {
             float val = interpolate_sdf(sdf[0], sdf[1]);
-            vertex_array[0] = pos + make_float3(val, 0, 0);
+            vertex_array[0] = pos + Vector3f(val, 0, 0);
         }
         if (edge_table[cube_index] & 2)
         {
             float val = interpolate_sdf(sdf[1], sdf[2]);
-            vertex_array[1] = pos + make_float3(1, val, 0);
+            vertex_array[1] = pos + Vector3f(1, val, 0);
         }
         if (edge_table[cube_index] & 4)
         {
             float val = interpolate_sdf(sdf[2], sdf[3]);
-            vertex_array[2] = pos + make_float3(1 - val, 1, 0);
+            vertex_array[2] = pos + Vector3f(1 - val, 1, 0);
         }
         if (edge_table[cube_index] & 8)
         {
             float val = interpolate_sdf(sdf[3], sdf[0]);
-            vertex_array[3] = pos + make_float3(0, 1 - val, 0);
+            vertex_array[3] = pos + Vector3f(0, 1 - val, 0);
         }
         if (edge_table[cube_index] & 16)
         {
             float val = interpolate_sdf(sdf[4], sdf[5]);
-            vertex_array[4] = pos + make_float3(val, 0, 1);
+            vertex_array[4] = pos + Vector3f(val, 0, 1);
         }
         if (edge_table[cube_index] & 32)
         {
             float val = interpolate_sdf(sdf[5], sdf[6]);
-            vertex_array[5] = pos + make_float3(1, val, 1);
+            vertex_array[5] = pos + Vector3f(1, val, 1);
         }
         if (edge_table[cube_index] & 64)
         {
             float val = interpolate_sdf(sdf[6], sdf[7]);
-            vertex_array[6] = pos + make_float3(1 - val, 1, 1);
+            vertex_array[6] = pos + Vector3f(1 - val, 1, 1);
         }
         if (edge_table[cube_index] & 128)
         {
             float val = interpolate_sdf(sdf[7], sdf[4]);
-            vertex_array[7] = pos + make_float3(0, 1 - val, 1);
+            vertex_array[7] = pos + Vector3f(0, 1 - val, 1);
         }
         if (edge_table[cube_index] & 256)
         {
             float val = interpolate_sdf(sdf[0], sdf[4]);
-            vertex_array[8] = pos + make_float3(0, 0, val);
+            vertex_array[8] = pos + Vector3f(0, 0, val);
         }
         if (edge_table[cube_index] & 512)
         {
             float val = interpolate_sdf(sdf[1], sdf[5]);
-            vertex_array[9] = pos + make_float3(1, 0, val);
+            vertex_array[9] = pos + Vector3f(1, 0, val);
         }
         if (edge_table[cube_index] & 1024)
         {
             float val = interpolate_sdf(sdf[2], sdf[6]);
-            vertex_array[10] = pos + make_float3(1, 1, val);
+            vertex_array[10] = pos + Vector3f(1, 1, val);
         }
         if (edge_table[cube_index] & 2048)
         {
             float val = interpolate_sdf(sdf[3], sdf[7]);
-            vertex_array[11] = pos + make_float3(0, 1, val);
+            vertex_array[11] = pos + Vector3f(0, 1, val);
         }
 
         return cube_index;
@@ -213,13 +213,13 @@ struct BuildVertexArray
         if (*triangle_count >= param.num_max_mesh_triangles_ || x >= *block_count)
             return;
 
-        float3 vertex_array[12];
-        int3 pos = block_array[x].pos_ * BLOCK_SIZE;
+        Vector3f vertex_array[12];
+        Vector3i pos = block_array[x].pos_ * BLOCK_SIZE;
         auto factor = param.voxel_size;
 
         for (int voxel_id = 0; voxel_id < BLOCK_SIZE; ++voxel_id)
         {
-            int3 local_pos = ToInt3(threadIdx.x, threadIdx.y, voxel_id);
+            Vector3i local_pos = Vector3i(threadIdx.x, threadIdx.y, voxel_id);
             int cube_index = make_vertex(vertex_array, pos + local_pos);
             if (cube_index <= 0)
                 continue;
@@ -236,7 +236,7 @@ struct BuildVertexArray
 
                     if (compute_normal)
                     {
-                        surface_normal[triangleId * 3] = normalised(cross(triangles[triangleId * 3 + 1] - triangles[triangleId * 3], triangles[triangleId * 3 + 2] - triangles[triangleId * 3]));
+                        surface_normal[triangleId * 3] = normalised((triangles[triangleId * 3 + 1] - triangles[triangleId * 3]).cross(triangles[triangleId * 3 + 2] - triangles[triangleId * 3]));
                         surface_normal[triangleId * 3 + 1] = surface_normal[triangleId * 3 + 2] = surface_normal[triangleId * 3];
                     }
                 }
@@ -261,7 +261,7 @@ void create_mesh_vertex_only(
     uint &block_count,
     HashEntry *block_list,
     uint &triangle_count,
-    float3 *vertex_data)
+    void *vertex_data)
 {
     uint *cuda_block_count;
     uint *cuda_triangle_count;
@@ -275,7 +275,7 @@ void create_mesh_vertex_only(
     bva.block_array = block_list;
     bva.block_count = cuda_block_count;
     bva.triangle_count = cuda_triangle_count;
-    bva.triangles = vertex_data;
+    bva.triangles = static_cast<Vector3f*>(vertex_data);
 
     dim3 thread(1024);
     dim3 block = dim3(div_up(state.num_total_hash_entries_, thread.x));
@@ -309,8 +309,8 @@ void create_mesh_with_normal(
     uint &block_count,
     HashEntry *block_list,
     uint &triangle_count,
-    float3 *vertex_data,
-    float3 *vertex_normal)
+    void *vertex_data,
+    void *vertex_normal)
 {
     uint *cuda_block_count;
     uint *cuda_triangle_count;
@@ -324,8 +324,8 @@ void create_mesh_with_normal(
     bva.block_array = block_list;
     bva.block_count = cuda_block_count;
     bva.triangle_count = cuda_triangle_count;
-    bva.triangles = vertex_data;
-    bva.surface_normal = vertex_normal;
+    bva.triangles = static_cast<Vector3f*>(vertex_data);
+    bva.surface_normal = static_cast<Vector3f*>(vertex_normal);
 
     dim3 thread(1024);
     dim3 block = dim3(div_up(state.num_total_hash_entries_, thread.x));
@@ -352,11 +352,11 @@ struct BuildVertexAndColourArray
 {
     MapStorage map_struct;
 
-    float3 *triangles;
+    Vector3f *triangles;
     HashEntry *block_array;
     uint *block_count;
     uint *triangle_count;
-    uchar3 *vertex_colour;
+    Vector3c *vertex_colour;
 
     __device__ __forceinline__ void select_blocks() const
     {
@@ -388,10 +388,10 @@ struct BuildVertexAndColourArray
         }
     }
 
-    __device__ __forceinline__ void read_sdf_and_colour(float3 pt, bool &valid, float &sdf, uchar3 &colour) const
+    __device__ __forceinline__ void read_sdf_and_colour(Vector3f pt, bool &valid, float &sdf, Vector3c &colour) const
     {
         Voxel *vx = NULL;
-        find_voxel(map_struct, ToInt3(pt), vx);
+        find_voxel(map_struct, ToVector3i(pt), vx);
         if (vx && vx->get_weight() > 1e-3)
         {
             valid = true;
@@ -404,38 +404,38 @@ struct BuildVertexAndColourArray
         }
     }
 
-    __device__ __forceinline__ bool read_sdf_and_colour_list(float *sdf, uchar3 *colour, int3 pos) const
+    __device__ __forceinline__ bool read_sdf_and_colour_list(float *sdf, Vector3c *colour, Vector3i pos) const
     {
         bool valid = false;
-        read_sdf_and_colour(pos + make_float3(0, 0, 0), valid, sdf[0], colour[0]);
+        read_sdf_and_colour(pos + Vector3f(0, 0, 0), valid, sdf[0], colour[0]);
         if (!valid)
             return false;
 
-        read_sdf_and_colour(pos + make_float3(1, 0, 0), valid, sdf[1], colour[1]);
+        read_sdf_and_colour(pos + Vector3f(1, 0, 0), valid, sdf[1], colour[1]);
         if (!valid)
             return false;
 
-        read_sdf_and_colour(pos + make_float3(1, 1, 0), valid, sdf[2], colour[2]);
+        read_sdf_and_colour(pos + Vector3f(1, 1, 0), valid, sdf[2], colour[2]);
         if (!valid)
             return false;
 
-        read_sdf_and_colour(pos + make_float3(0, 1, 0), valid, sdf[3], colour[3]);
+        read_sdf_and_colour(pos + Vector3f(0, 1, 0), valid, sdf[3], colour[3]);
         if (!valid)
             return false;
 
-        read_sdf_and_colour(pos + make_float3(0, 0, 1), valid, sdf[4], colour[4]);
+        read_sdf_and_colour(pos + Vector3f(0, 0, 1), valid, sdf[4], colour[4]);
         if (!valid)
             return false;
 
-        read_sdf_and_colour(pos + make_float3(1, 0, 1), valid, sdf[5], colour[5]);
+        read_sdf_and_colour(pos + Vector3f(1, 0, 1), valid, sdf[5], colour[5]);
         if (!valid)
             return false;
 
-        read_sdf_and_colour(pos + make_float3(1, 1, 1), valid, sdf[6], colour[6]);
+        read_sdf_and_colour(pos + Vector3f(1, 1, 1), valid, sdf[6], colour[6]);
         if (!valid)
             return false;
 
-        read_sdf_and_colour(pos + make_float3(0, 1, 1), valid, sdf[7], colour[7]);
+        read_sdf_and_colour(pos + Vector3f(0, 1, 1), valid, sdf[7], colour[7]);
         if (!valid)
             return false;
 
@@ -453,7 +453,7 @@ struct BuildVertexAndColourArray
         return (0 - v1) / (v2 - v1);
     }
 
-    __device__ __forceinline__ int make_vertex_and_colour(float3 *vertex_array, uchar3 *colour_array, const int3 pos)
+    __device__ __forceinline__ int make_vertex_and_colour(Vector3f *vertex_array, Vector3c *colour_array, const Vector3i pos)
     {
         float sdf[8];
 
@@ -484,65 +484,65 @@ struct BuildVertexAndColourArray
         if (edge_table[cube_index] & 1)
         {
             float val = interpolate_sdf(sdf[0], sdf[1]);
-            vertex_array[0] = pos + make_float3(val, 0, 0);
+            vertex_array[0] = pos + Vector3f(val, 0, 0);
         }
         if (edge_table[cube_index] & 2)
         {
             float val = interpolate_sdf(sdf[1], sdf[2]);
-            vertex_array[1] = pos + make_float3(1, val, 0);
+            vertex_array[1] = pos + Vector3f(1, val, 0);
         }
         if (edge_table[cube_index] & 4)
         {
             float val = interpolate_sdf(sdf[2], sdf[3]);
-            vertex_array[2] = pos + make_float3(1 - val, 1, 0);
+            vertex_array[2] = pos + Vector3f(1 - val, 1, 0);
         }
         if (edge_table[cube_index] & 8)
         {
             float val = interpolate_sdf(sdf[3], sdf[0]);
-            vertex_array[3] = pos + make_float3(0, 1 - val, 0);
+            vertex_array[3] = pos + Vector3f(0, 1 - val, 0);
         }
         if (edge_table[cube_index] & 16)
         {
             float val = interpolate_sdf(sdf[4], sdf[5]);
-            vertex_array[4] = pos + make_float3(val, 0, 1);
+            vertex_array[4] = pos + Vector3f(val, 0, 1);
         }
         if (edge_table[cube_index] & 32)
         {
             float val = interpolate_sdf(sdf[5], sdf[6]);
-            vertex_array[5] = pos + make_float3(1, val, 1);
+            vertex_array[5] = pos + Vector3f(1, val, 1);
         }
         if (edge_table[cube_index] & 64)
         {
             float val = interpolate_sdf(sdf[6], sdf[7]);
-            vertex_array[6] = pos + make_float3(1 - val, 1, 1);
+            vertex_array[6] = pos + Vector3f(1 - val, 1, 1);
         }
         if (edge_table[cube_index] & 128)
         {
             float val = interpolate_sdf(sdf[7], sdf[4]);
-            vertex_array[7] = pos + make_float3(0, 1 - val, 1);
+            vertex_array[7] = pos + Vector3f(0, 1 - val, 1);
         }
         if (edge_table[cube_index] & 256)
         {
             float val = interpolate_sdf(sdf[0], sdf[4]);
-            vertex_array[8] = pos + make_float3(0, 0, val);
+            vertex_array[8] = pos + Vector3f(0, 0, val);
             colour_array[8] = colour_array[0];
         }
         if (edge_table[cube_index] & 512)
         {
             float val = interpolate_sdf(sdf[1], sdf[5]);
-            vertex_array[9] = pos + make_float3(1, 0, val);
+            vertex_array[9] = pos + Vector3f(1, 0, val);
             colour_array[9] = colour_array[1];
         }
         if (edge_table[cube_index] & 1024)
         {
             float val = interpolate_sdf(sdf[2], sdf[6]);
-            vertex_array[10] = pos + make_float3(1, 1, val);
+            vertex_array[10] = pos + Vector3f(1, 1, val);
             colour_array[10] = colour_array[2];
         }
         if (edge_table[cube_index] & 2048)
         {
             float val = interpolate_sdf(sdf[3], sdf[7]);
-            vertex_array[11] = pos + make_float3(0, 1, val);
+            vertex_array[11] = pos + Vector3f(0, 1, val);
             colour_array[11] = colour_array[3];
         }
 
@@ -555,14 +555,14 @@ struct BuildVertexAndColourArray
         if (*triangle_count >= param.num_max_mesh_triangles_ || x >= *block_count)
             return;
 
-        float3 vertex_array[12];
-        uchar3 colour_array[12];
-        int3 pos = block_array[x].pos_ * BLOCK_SIZE;
+        Vector3f vertex_array[12];
+        Vector3c colour_array[12];
+        Vector3i pos = block_array[x].pos_ * BLOCK_SIZE;
         auto factor = param.voxel_size;
 
         for (int voxel_id = 0; voxel_id < BLOCK_SIZE; ++voxel_id)
         {
-            int3 local_pos = ToInt3(threadIdx.x, threadIdx.y, voxel_id);
+            Vector3i local_pos = Vector3i(threadIdx.x, threadIdx.y, voxel_id);
             int cube_index = make_vertex_and_colour(vertex_array, colour_array, pos + local_pos);
             if (cube_index <= 0)
                 continue;
@@ -601,8 +601,8 @@ void create_mesh_with_colour(
     uint &block_count,
     HashEntry *block_list,
     uint &triangle_count,
-    float3 *vertex_data,
-    uchar3 *vertex_colour)
+    void *vertex_data,
+    void *vertex_colour)
 {
     uint *cuda_block_count;
     uint *cuda_triangle_count;
@@ -616,8 +616,8 @@ void create_mesh_with_colour(
     delegate.block_array = block_list;
     delegate.block_count = cuda_block_count;
     delegate.triangle_count = cuda_triangle_count;
-    delegate.triangles = vertex_data;
-    delegate.vertex_colour = vertex_colour;
+    delegate.triangles = static_cast<Vector3f*>(vertex_data);
+    delegate.vertex_colour = static_cast<Vector3c*>(vertex_colour);
 
     dim3 thread(1024);
     dim3 block = dim3(div_up(state.num_total_hash_entries_, thread.x));

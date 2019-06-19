@@ -63,9 +63,9 @@ FUSION_DEVICE extern MapState param;
 
 struct RenderingBlock
 {
-    short2 upper_left;
-    short2 lower_right;
-    float2 zrange;
+    Vector2s upper_left;
+    Vector2s lower_right;
+    Vector2f zrange;
 };
 
 struct MapStorage
@@ -98,21 +98,21 @@ struct MapStruct
 };
 
 FUSION_DEVICE bool DeleteHashEntry(MapStorage &map, HashEntry &current);
-FUSION_DEVICE void create_block(MapStorage &map, const int3 &blockPos, int &bucket_index);
+FUSION_DEVICE void create_block(MapStorage &map, const Vector3i &blockPos, int &bucket_index);
 FUSION_DEVICE void delete_block(MapStorage &map, HashEntry &current);
-FUSION_DEVICE bool CreateHashEntry(MapStorage &map, const int3 &pos, const int &offset, HashEntry *entry);
-FUSION_DEVICE void find_voxel(const MapStorage &map, const int3 &voxel_pos, Voxel *&out);
-FUSION_DEVICE void find_entry(const MapStorage &map, const int3 &block_pos, HashEntry *&out);
-FUSION_DEVICE int compute_hash(const int3 &pos);
+FUSION_DEVICE bool CreateHashEntry(MapStorage &map, const Vector3i &pos, const int &offset, HashEntry *entry);
+FUSION_DEVICE void find_voxel(const MapStorage &map, const Vector3i &voxel_pos, Voxel *&out);
+FUSION_DEVICE void find_entry(const MapStorage &map, const Vector3i &block_pos, HashEntry *&out);
+FUSION_DEVICE int compute_hash(const Vector3i &pos);
 FUSION_DEVICE bool lock_bucket(int *mutex);
 FUSION_DEVICE void unlock_bucket(int *mutex);
-FUSION_DEVICE int3 world_pt_to_voxel_pos(float3 pt);
-FUSION_DEVICE float3 voxel_pos_to_world_pt(const int3 &voxel_pos);
-FUSION_DEVICE int3 voxel_pos_to_block_pos(int3 voxel_pos);
-FUSION_DEVICE int3 block_pos_to_voxel_pos(const int3 &block_pos);
-FUSION_DEVICE int3 voxel_pos_to_local_pos(int3 pos);
-FUSION_DEVICE int local_pos_to_local_idx(const int3 &pos);
-FUSION_DEVICE int3 local_idx_to_local_pos(const int &idx);
-FUSION_DEVICE int voxel_pos_to_local_idx(const int3 &pos);
+FUSION_DEVICE Vector3i world_pt_to_voxel_pos(Vector3f pt);
+FUSION_DEVICE Vector3f voxel_pos_to_world_pt(const Vector3i &voxel_pos);
+FUSION_DEVICE Vector3i voxel_pos_to_block_pos(Vector3i voxel_pos);
+FUSION_DEVICE Vector3i block_pos_to_voxel_pos(const Vector3i &block_pos);
+FUSION_DEVICE Vector3i voxel_pos_to_local_pos(Vector3i pos);
+FUSION_DEVICE int local_pos_to_local_idx(const Vector3i &pos);
+FUSION_DEVICE Vector3i local_idx_to_local_pos(const int &idx);
+FUSION_DEVICE int voxel_pos_to_local_idx(const Vector3i &pos);
 
 #endif

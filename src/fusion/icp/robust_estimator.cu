@@ -18,7 +18,7 @@ struct RGBSelection
         float &last_val,
         float &dx,
         float &dy,
-        float4 &pt) const
+        Vector4f &pt) const
     {
         // reference point
         pt = last_vmap.ptr(y)[x];
@@ -70,21 +70,21 @@ struct RGBSelection
             if (y >= cols || x >= rows)
                 return;
 
-            float4 pt;
+            Vector4f pt;
             float curr_val, last_val, dx, dy;
             bool corresp_found = find_corresp(x, y, curr_val, last_val, dx, dy, pt);
 
             if (corresp_found)
             {
                 uint index = atomicAdd(num_corresp, 1);
-                array_image[index] = make_float4(last_val, curr_val, dx, dy);
+                array_image[index] = Vector4f(last_val, curr_val, dx, dy);
                 array_point[index] = pt;
                 error_term[index] = pow(curr_val - last_val, 2);
             }
         }
     }
 
-    cv::cuda::PtrStep<float4> last_vmap;
+    cv::cuda::PtrStep<Vector4f> last_vmap;
     cv::cuda::PtrStep<float> last_intensity;
     cv::cuda::PtrStep<float> curr_intensity;
     cv::cuda::PtrStep<float> curr_intensity_dx;
@@ -94,8 +94,8 @@ struct RGBSelection
     int N, cols, rows;
 
     int *num_corresp;
-    float4 *array_image;
-    float4 *array_point;
+    Vector4f *array_image;
+    Vector4f *array_point;
 
     float *error_term;
 };
@@ -122,8 +122,8 @@ void compute_rgb_corresp(
     const cv::cuda::GpuMat curr_intensity_dy,
     const Sophus::SE3d &frame_pose,
     const IntrinsicMatrix K,
-    float4 *transformed_points,
-    float4 *image_corresp_data,
+    Vector4f *transformed_points,
+    Vector4f *image_corresp_data,
     float *error_term_array,
     float *variance_term_array,
     float &mean_estimate,
@@ -186,8 +186,8 @@ struct RGBLeastSquares
 {
     cv::cuda::PtrStep<float> out;
 
-    float4 *transformed_points;
-    float4 *image_corresp_data;
+    Vector4f *transformed_points;
+    Vector4f *image_corresp_data;
     float mean_estimated;
     float stdev_estimated;
     uint num_corresp;
@@ -200,11 +200,11 @@ struct RGBLeastSquares
         float weight = 0;
         if (k < num_corresp)
         {
-            float3 p_transformed = ToFloat3(transformed_points[k]);
-            float4 image = image_corresp_data[k];
+            Vector3f p_transformed = ToVector3(transformed_points[k]);
+            Vector4f image = image_corresp_data[k];
 
             float z_inv = 1.0 / p_transformed.z;
-            float3 left;
+            Vector3f left;
             left.x = image.z * fx * z_inv;
             left.y = image.w * fy * z_inv;
             left.z = -(left.x * p_transformed.x + left.y * p_transformed.y) * z_inv;
@@ -220,8 +220,8 @@ struct RGBLeastSquares
 
             row[6] = (-residual);
             // printf("%f, %f\n", res_normalized, threshold_huber);
-            *(float3 *)&row[0] = left;
-            *(float3 *)&row[3] = cross(p_transformed, left);
+            *(Vector3f *)&row[0] = left;
+            *(Vector3f *)&row[3] = p_transformed.cross(left);
         }
 
         int count = 0;
@@ -273,8 +273,8 @@ __global__ void compute_least_square_RGB_kernel(RGBLeastSquares delegate)
 // STATUS: On halt
 void compute_least_square_RGB(
     const uint num_corresp,
-    float4 *transformed_points,
-    float4 *image_corresp_data,
+    Vector4f *transformed_points,
+    Vector4f *image_corresp_data,
     const float mean_estimated,
     const float stdev_estimated,
     const IntrinsicMatrix K,
@@ -311,7 +311,7 @@ struct RgbReduction2
 {
     __device__ bool find_corresp(int &x, int &y)
     {
-        float4 pt = last_vmap.ptr(y)[x];
+        Vector4f pt = last_vmap.ptr(y)[x];
         if (pt.w < 0 || isnan(pt.x))
             return false;
 
@@ -319,7 +319,7 @@ struct RgbReduction2
         if (!isfinite(i_l))
             return false;
 
-        p_transformed = pose(ToFloat3(pt));
+        p_transformed = pose(ToVector3(pt));
         u0 = p_transformed.x / p_transformed.z * fx + cx;
         v0 = p_transformed.y / p_transformed.z * fy + cy;
         if (u0 >= 2 && u0 < cols - 2 && v0 >= 2 && v0 < rows - 2)
@@ -352,7 +352,7 @@ struct RgbReduction2
 
         if (corresp_found)
         {
-            float3 left;
+            Vector3f left;
             float z_inv = 1.0 / p_transformed.z;
             left.x = dx * fx * z_inv;
             left.y = dy * fy * z_inv;
@@ -373,8 +373,8 @@ struct RgbReduction2
             }
 
             row[6] = weight * (-residual);
-            *(float3 *)&row[0] = weight * left;
-            *(float3 *)&row[3] = weight * cross(p_transformed, left);
+            *(Vector3f *)&row[0] = weight * left;
+            *(Vector3f *)&row[3] = weight * p_transformed.cross(left);
         }
 
         int count = 0;
@@ -415,11 +415,11 @@ struct RgbReduction2
     float u0, v0;
     DeviceMatrix3x4 pose;
     float fx, fy, cx, cy, invfx, invfy;
-    cv::cuda::PtrStep<float4> point_cloud, last_vmap;
+    cv::cuda::PtrStep<Vector4f> point_cloud, last_vmap;
     cv::cuda::PtrStep<float> last_image, curr_image;
     cv::cuda::PtrStep<float> dIdx, dIdy;
     cv::cuda::PtrStep<float> out;
-    float3 p_transformed, p_last;
+    Vector3f p_transformed, p_last;
     float stddev;
 
 private:
