@@ -200,7 +200,7 @@ struct RGBLeastSquares
         float weight = 0;
         if (k < num_corresp)
         {
-            float3 p_transformed = make_float3(transformed_points[k]);
+            float3 p_transformed = ToFloat3(transformed_points[k]);
             float4 image = image_corresp_data[k];
 
             float z_inv = 1.0 / p_transformed.z;
@@ -319,7 +319,7 @@ struct RgbReduction2
         if (!isfinite(i_l))
             return false;
 
-        p_transformed = pose(make_float3(pt));
+        p_transformed = pose(ToFloat3(pt));
         u0 = p_transformed.x / p_transformed.z * fx + cx;
         v0 = p_transformed.y / p_transformed.z * fy + cy;
         if (u0 >= 2 && u0 < cols - 2 && v0 >= 2 && v0 < rows - 2)

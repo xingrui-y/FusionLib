@@ -91,7 +91,7 @@ __device__ float2 project(float3 pt, float fx, float fy, float cx, float cy)
 
 __device__ float3 unproject(int x, int y, float z, float invfx, float invfy, float cx, float cy)
 {
-    return make_float3(invfx * (x - cx) * z, invfy * (y - cy) * z, z);
+    return ToFloat3(invfx * (x - cx) * z, invfy * (y - cy) * z, z);
 }
 
 __device__ float3 unproject_world(int x, int y, float z, float invfx,
@@ -337,7 +337,7 @@ __global__ void update_map_with_colour_kernel(MapStorage map_struct,
         voxel.set_weight(weight_p + weight);
 
         // fuse colour
-        colour_p = make_uchar3((colour_p * weight_p + colour_new * weight) / (weight_p + weight));
+        colour_p = ToUChar3((colour_p * weight_p + colour_new * weight) / (weight_p + weight));
         voxel.rgb = colour_p;
     }
 }
@@ -377,7 +377,7 @@ __global__ void update_map_weighted_kernel(
             continue;
 
         float dist = depth.ptr(v)[u];
-        auto n_c = make_float3(normal.ptr(v)[u]);
+        auto n_c = ToFloat3(normal.ptr(v)[u]);
         if (isnan(dist) || isnan(n_c.x) || dist > param.zmax_update || dist < param.zmin_update)
             continue;
 
@@ -411,7 +411,7 @@ __global__ void update_map_weighted_kernel(
         voxel.set_weight(weight_p + weight);
 
         // fuse colour
-        colour_p = make_uchar3((colour_p * weight_p + colour_new * weight) / (weight_p + weight));
+        colour_p = ToUChar3((colour_p * weight_p + colour_new * weight) / (weight_p + weight));
         voxel.rgb = colour_p;
     }
 }

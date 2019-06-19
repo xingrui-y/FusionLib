@@ -52,7 +52,7 @@ struct BuildVertexArray
     __device__ __forceinline__ float read_sdf(float3 pt, bool &valid) const
     {
         Voxel *voxel = NULL;
-        find_voxel(map_struct, make_int3(pt), voxel);
+        find_voxel(map_struct, ToInt3(pt), voxel);
         if (voxel && voxel->weight != 0)
         {
             valid = true;
@@ -219,7 +219,7 @@ struct BuildVertexArray
 
         for (int voxel_id = 0; voxel_id < BLOCK_SIZE; ++voxel_id)
         {
-            int3 local_pos = make_int3(threadIdx.x, threadIdx.y, voxel_id);
+            int3 local_pos = ToInt3(threadIdx.x, threadIdx.y, voxel_id);
             int cube_index = make_vertex(vertex_array, pos + local_pos);
             if (cube_index <= 0)
                 continue;
@@ -391,7 +391,7 @@ struct BuildVertexAndColourArray
     __device__ __forceinline__ void read_sdf_and_colour(float3 pt, bool &valid, float &sdf, uchar3 &colour) const
     {
         Voxel *vx = NULL;
-        find_voxel(map_struct, make_int3(pt), vx);
+        find_voxel(map_struct, ToInt3(pt), vx);
         if (vx && vx->get_weight() > 1e-3)
         {
             valid = true;
@@ -562,7 +562,7 @@ struct BuildVertexAndColourArray
 
         for (int voxel_id = 0; voxel_id < BLOCK_SIZE; ++voxel_id)
         {
-            int3 local_pos = make_int3(threadIdx.x, threadIdx.y, voxel_id);
+            int3 local_pos = ToInt3(threadIdx.x, threadIdx.y, voxel_id);
             int cube_index = make_vertex_and_colour(vertex_array, colour_array, pos + local_pos);
             if (cube_index <= 0)
                 continue;

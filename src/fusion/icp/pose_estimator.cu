@@ -19,7 +19,7 @@ struct RgbReduction
         if (!isfinite(i_l))
             return false;
 
-        p_transformed = pose(make_float3(pt));
+        p_transformed = pose(ToFloat3(pt));
         u0 = p_transformed.x / p_transformed.z * fx + cx;
         v0 = p_transformed.y / p_transformed.z * fy + cy;
         if (u0 >= 2 && u0 < cols - 2 && v0 >= 2 && v0 < rows - 2)
@@ -171,7 +171,7 @@ struct ICPReduction
 {
     __device__ __inline__ bool searchPoint(int &x, int &y, float3 &vcurr_g, float3 &vlast_g, float3 &nlast_g) const
     {
-        float3 vlast_c = make_float3(last_vmap_.ptr(y)[x]);
+        float3 vlast_c = ToFloat3(last_vmap_.ptr(y)[x]);
         if (isnan(vlast_c.x))
             return false;
 
@@ -183,12 +183,12 @@ struct ICPReduction
         if (u < 0 || v < 0 || u >= cols || v >= rows)
             return false;
 
-        vcurr_g = make_float3(curr_vmap_.ptr(v)[u]);
+        vcurr_g = ToFloat3(curr_vmap_.ptr(v)[u]);
 
-        float3 nlast_c = make_float3(last_nmap_.ptr(y)[x]);
+        float3 nlast_c = ToFloat3(last_nmap_.ptr(y)[x]);
         nlast_g = pose.rotate(nlast_c);
 
-        float3 ncurr_g = make_float3(curr_nmap_.ptr(v)[u]);
+        float3 ncurr_g = ToFloat3(curr_nmap_.ptr(v)[u]);
 
         float dist = norm(vlast_g - vcurr_g);
         float sine = norm(cross(ncurr_g, nlast_g));

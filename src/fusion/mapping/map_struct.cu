@@ -469,7 +469,7 @@ FUSION_HOST void MapStruct<Device>::readFromDisk(std::string file_name, const bo
 FUSION_DEVICE int3 world_pt_to_voxel_pos(float3 pt)
 {
     pt = pt / param.voxel_size;
-    return make_int3(pt);
+    return ToInt3(pt);
 }
 
 FUSION_DEVICE float3 voxel_pos_to_world_pt(const int3 &voxel_pos)
@@ -518,7 +518,7 @@ FUSION_DEVICE int3 local_idx_to_local_pos(const int &idx)
     uint x = idx % BLOCK_SIZE;
     uint y = idx % (BLOCK_SIZE * BLOCK_SIZE) / BLOCK_SIZE;
     uint z = idx / (BLOCK_SIZE * BLOCK_SIZE);
-    return make_int3(x, y, z);
+    return ToInt3(x, y, z);
 }
 
 FUSION_DEVICE int voxel_pos_to_local_idx(const int3 &pos)

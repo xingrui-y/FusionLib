@@ -288,7 +288,7 @@ struct MapRenderingDelegate
     __device__ __forceinline__ float read_sdf(const float3 &pt3d, bool &valid)
     {
         Voxel *voxel = NULL;
-        find_voxel(map_struct, make_int3(pt3d), voxel);
+        find_voxel(map_struct, ToInt3(pt3d), voxel);
         if (voxel && voxel->weight != 0)
         {
             valid = true;
@@ -347,7 +347,7 @@ struct MapRenderingDelegate
         if (x >= width || y >= height)
             return;
 
-        vmap.ptr(y)[x] = make_float4(__int_as_float(0x7fffffff));
+        vmap.ptr(y)[x] = ToFloat4(__int_as_float(0x7fffffff));
 
         int2 local_id;
         local_id.x = __float2int_rd((float)x / 8);
@@ -417,14 +417,14 @@ struct MapRenderingDelegate
         if (found_pt)
         {
             result = inv_pose(result * param.voxel_size);
-            vmap.ptr(y)[x] = make_float4(result, 1.0);
+            vmap.ptr(y)[x] = ToFloat4(result, 1.0);
         }
     }
 
     __device__ __forceinline__ uchar3 read_colour(float3 pt3d, bool &valid)
     {
         Voxel *voxel = NULL;
-        find_voxel(map_struct, make_int3(pt3d), voxel);
+        find_voxel(map_struct, ToInt3(pt3d), voxel);
         if (voxel && voxel->weight != 0)
         {
             valid = true;
@@ -433,7 +433,7 @@ struct MapRenderingDelegate
         else
         {
             valid = false;
-            return make_uchar3(0);
+            return ToUChar3(0);
         }
     }
 
@@ -469,7 +469,7 @@ struct MapRenderingDelegate
         result[1] = (1.0f - xyz.x) * sdf[0] + xyz.x * sdf[1];
         result[3] = (1.0f - xyz.y) * result[0] + xyz.y * result[1];
         valid = valid_pt;
-        return make_uchar3((1.0f - xyz.z) * result[2] + xyz.z * result[3]);
+        return ToUChar3((1.0f - xyz.z) * result[2] + xyz.z * result[3]);
     }
     cv::cuda::PtrStep<uchar3> image;
     __device__ __forceinline__ void raycast_with_colour()
@@ -479,8 +479,8 @@ struct MapRenderingDelegate
         if (x >= width || y >= height)
             return;
 
-        vmap.ptr(y)[x] = make_float4(__int_as_float(0x7fffffff));
-        image.ptr(y)[x] = make_uchar3(255);
+        vmap.ptr(y)[x] = ToFloat4(__int_as_float(0x7fffffff));
+        image.ptr(y)[x] = ToUChar3(255);
 
         int2 local_id;
         local_id.x = __float2int_rd((float)x / 8);
@@ -555,7 +555,7 @@ struct MapRenderingDelegate
                 return;
 
             result = inv_pose(result * param.voxel_size);
-            vmap.ptr(y)[x] = make_float4(result, 1.0);
+            vmap.ptr(y)[x] = ToFloat4(result, 1.0);
             image.ptr(y)[x] = rgb;
         }
     }
