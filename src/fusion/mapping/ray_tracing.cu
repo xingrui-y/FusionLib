@@ -163,8 +163,8 @@ struct RenderingBlockDelegate
             valid = create_rendering_block(visible_block_pos[x].pos_, block);
             float dx = (float)block.lower_right.x - block.upper_left.x + 1;
             float dy = (float)block.lower_right.y - block.upper_left.y + 1;
-            nx = __float2int_rd(dx / RENDERING_BLOCK_SIZE_X);
-            ny = __float2int_rd(dy / RENDERING_BLOCK_SIZE_Y);
+            nx = __float2int_ru(dx / RENDERING_BLOCK_SIZE_X);
+            ny = __float2int_ru(dy / RENDERING_BLOCK_SIZE_Y);
 
             if (valid)
             {

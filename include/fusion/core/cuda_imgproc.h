@@ -1,5 +1,5 @@
-#ifndef __IMAGE_OPS__
-#define __IMAGE_OPS__
+#ifndef FUSION_CORE_CUDA_IMGPROC_H
+#define FUSION_CORE_CUDA_IMGPROC_H
 
 #include "intrinsic_matrix.h"
 #include <sophus/se3.hpp>

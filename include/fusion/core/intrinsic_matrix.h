@@ -1,5 +1,5 @@
-#ifndef __INTRINSIC_MATRIX__
-#define __INTRINSIC_MATRIX__
+#ifndef FUSION_CORE_INTRINSIC_MATRIX_H
+#define FUSION_CORE_INTRINSIC_MATRIX_H
 
 #include <memory>
 #include <vector>
