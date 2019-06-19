@@ -49,17 +49,23 @@ PROPERTIES
 )
 
 target_link_directories(fusion
-PUBLIC
+PRIVATE
     Eigen3::Eigen
     ${OpenCV_LIBRARIES}
     ${CUDA_LIBRARIES}
 )
 
 install(TARGETS fusion
+        EXPORT fusion-targets
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
         CONFIGURATIONS Release)
 
+install(EXPORT fusion-targets
+        NAMESPACE fusion::fusion
+        FILE fusion-config.cmake
+        DESTINATION lib/cmake/fusion)
+
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
-        DESTINATION /usr/local)
+        DESTINATION ${CMAKE_INSTALL_PREFIX})
