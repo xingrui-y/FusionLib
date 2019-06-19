@@ -1,7 +1,7 @@
 #include <fusion/core/cuda_imgproc.h>
 #include <fusion/core/cuda_utils.h>
-#include <fusion/math/matrices.h>
-#include <fusion/math/vectors.h>
+#include <fusion/math/matrix.h>
+#include <fusion/math/vector.h>
 #include <fusion/core/intrinsic_matrix.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudawarping.hpp>
@@ -353,7 +353,7 @@ __device__ inline Vector3c interpolate_bilinear(const cv::cuda::PtrStepSz<Vector
 
 __global__ void warp_image_kernel(const cv::cuda::PtrStepSz<Vector3c> src,
                                   const cv::cuda::PtrStep<Vector4f> vmap_dst,
-                                  const DeviceMatrix3x4 pose,
+                                  const Matrix3x4f pose,
                                   const DeviceIntrinsicMatrix K,
                                   cv::cuda::PtrStep<Vector3c> dst)
 {
@@ -381,7 +381,7 @@ void warp_image(const cv::cuda::GpuMat src, const cv::cuda::GpuMat vmap_dst, con
     dim3 block(8, 4);
     dim3 grid = create_grid(block, src.cols, src.rows);
 
-    warp_image_kernel<<<grid, block>>>(src, vmap_dst, pose, K, dst);
+    warp_image_kernel<<<grid, block>>>(src, vmap_dst, pose.cast<float>().matrix3x4(), K, dst);
 }
 
 } // namespace fusion

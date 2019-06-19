@@ -2,8 +2,8 @@
 #define FUSION_MAPPING_DATA_TYPES_H
 
 #include <fusion/macros.h>
-#include <fusion/math/matrices.h>
-#include <fusion/math/vectors.h>
+#include <fusion/math/matrix.h>
+#include <fusion/math/vector.h>
 #include <cuda_runtime_api.h>
 
 namespace fusion

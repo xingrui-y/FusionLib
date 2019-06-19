@@ -17,7 +17,7 @@ namespace cuda
 struct RenderingBlockDelegate
 {
     int width, height;
-    DeviceMatrix3x4 inv_pose;
+    Matrix3x4f inv_pose;
     float fx, fy, cx, cy;
 
     uint *rendering_block_count;
@@ -247,7 +247,7 @@ void create_rendering_blocks(
 
     delegate.width = cols;
     delegate.height = rows;
-    delegate.inv_pose = frame_pose.inverse();
+    delegate.inv_pose = frame_pose.inverse().cast<float>().matrix3x4();
     delegate.zrange_x = zrange_x;
     delegate.zrange_y = zrange_y;
     delegate.fx = cam_params.fx;
@@ -285,7 +285,7 @@ struct MapRenderingDelegate
     cv::cuda::PtrStepSz<float> zrange_x;
     cv::cuda::PtrStepSz<float> zrange_y;
     float invfx, invfy, cx, cy;
-    DeviceMatrix3x4 pose, inv_pose;
+    Matrix3x4f pose, inv_pose;
 
     __device__ __forceinline__ float read_sdf(const Vector3f &pt3d, bool &valid)
     {
@@ -598,8 +598,8 @@ void raycast(MapStorage map_struct,
     delegate.invfy = intrinsic_matrix.invfy;
     delegate.cx = intrinsic_matrix.cx;
     delegate.cy = intrinsic_matrix.cy;
-    delegate.pose = pose;
-    delegate.inv_pose = pose.inverse();
+    delegate.pose = pose.cast<float>().matrix3x4();
+    delegate.inv_pose = pose.inverse().cast<float>().matrix3x4();
 
     dim3 thread(4, 8);
     dim3 block(div_up(cols, thread.x), div_up(rows, thread.y));
@@ -634,8 +634,8 @@ void raycast_with_colour(MapStorage map_struct,
     delegate.invfy = intrinsic_matrix.invfy;
     delegate.cx = intrinsic_matrix.cx;
     delegate.cy = intrinsic_matrix.cy;
-    delegate.pose = pose;
-    delegate.inv_pose = pose.inverse();
+    delegate.pose = pose.cast<float>().matrix3x4();
+    delegate.inv_pose = pose.inverse().cast<float>().matrix3x4();
 
     dim3 thread(4, 8);
     dim3 block(div_up(cols, thread.x), div_up(rows, thread.y));

@@ -10,7 +10,7 @@ namespace fusion
 namespace cuda
 {
 
-__device__ bool is_vertex_visible(Vector3f pt, DeviceMatrix3x4 inv_pose,
+__device__ bool is_vertex_visible(Vector3f pt, Matrix3x4f inv_pose,
                                   int cols, int rows, float fx,
                                   float fy, float cx, float cy)
 {
@@ -20,7 +20,7 @@ __device__ bool is_vertex_visible(Vector3f pt, DeviceMatrix3x4 inv_pose,
 }
 
 __device__ bool is_block_visible(const Vector3i &block_pos,
-                                 DeviceMatrix3x4 inv_pose,
+                                 Matrix3x4f inv_pose,
                                  int cols, int rows, float fx,
                                  float fy, float cx, float cy)
 {
@@ -40,7 +40,7 @@ __device__ bool is_block_visible(const Vector3i &block_pos,
     return false;
 }
 
-__global__ void check_visibility_flag_kernel(MapStorage map_struct, uchar *flag, DeviceMatrix3x4 inv_pose,
+__global__ void check_visibility_flag_kernel(MapStorage map_struct, uchar *flag, Matrix3x4f inv_pose,
                                              int cols, int rows, float fx, float fy, float cx, float cy)
 {
     const int idx = threadIdx.x + blockDim.x * blockIdx.x;
@@ -96,7 +96,7 @@ __device__ Vector3f unproject(int x, int y, float z, float invfx, float invfy, f
 }
 
 __device__ Vector3f unproject_world(int x, int y, float z, float invfx,
-                                    float invfy, float cx, float cy, DeviceMatrix3x4 pose)
+                                    float invfy, float cx, float cy, Matrix3x4f pose)
 {
     return pose(unproject(x, y, z, invfx, invfy, cx, cy));
 }
@@ -110,7 +110,7 @@ __device__ __inline__ int create_block(MapStorage &map_struct, const Vector3i bl
 
 __global__ void create_blocks_kernel(MapStorage map_struct, cv::cuda::PtrStepSz<float> depth,
                                      float invfx, float invfy, float cx, float cy,
-                                     DeviceMatrix3x4 pose, uchar *flag)
+                                     Matrix3x4f pose, uchar *flag)
 {
     const int x = threadIdx.x + blockDim.x * blockIdx.x;
     const int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -221,7 +221,7 @@ __global__ void update_map_kernel(MapStorage map_struct,
                                   HashEntry *visible_blocks,
                                   uint count_visible_block,
                                   cv::cuda::PtrStepSz<float> depth,
-                                  DeviceMatrix3x4 inv_pose,
+                                  Matrix3x4f inv_pose,
                                   float fx, float fy,
                                   float cx, float cy)
 {
@@ -280,7 +280,7 @@ __global__ void update_map_with_colour_kernel(MapStorage map_struct,
                                               uint count_visible_block,
                                               cv::cuda::PtrStepSz<float> depth,
                                               cv::cuda::PtrStepSz<Vector3c> image,
-                                              DeviceMatrix3x4 inv_pose,
+                                              Matrix3x4f inv_pose,
                                               float fx, float fy,
                                               float cx, float cy)
 {
@@ -350,7 +350,7 @@ __global__ void update_map_weighted_kernel(
     cv::cuda::PtrStepSz<float> depth,
     cv::cuda::PtrStepSz<Vector4f> normal,
     cv::cuda::PtrStepSz<Vector3c> image,
-    DeviceMatrix3x4 inv_pose,
+    Matrix3x4f inv_pose,
     float fx, float fy,
     float cx, float cy)
 {
@@ -448,7 +448,7 @@ void update(MapStorage map_struct,
         K.invfx,
         K.invfy,
         K.cx, K.cy,
-        frame_pose,
+        frame_pose.cast<float>().matrix3x4(),
         flag.get());
 
     thread = dim3(MAX_THREAD);
@@ -457,7 +457,7 @@ void update(MapStorage map_struct,
     check_visibility_flag_kernel<<<block, thread>>>(
         map_struct,
         flag.get(),
-        frame_pose.inverse(),
+        frame_pose.inverse().cast<float>().matrix3x4(),
         cols, rows,
         K.fx, K.fy,
         K.cx, K.cy);
@@ -483,7 +483,7 @@ void update(MapStorage map_struct,
         visible_blocks,
         visible_block_count,
         depth, image,
-        frame_pose.inverse(),
+        frame_pose.inverse().cast<float>().matrix3x4(),
         K.fx, K.fy,
         K.cx, K.cy);
 }
@@ -521,7 +521,7 @@ void update_weighted(
         K.invfx,
         K.invfy,
         K.cx, K.cy,
-        frame_pose,
+        frame_pose.cast<float>().matrix3x4(),
         flag.get());
 
     thread = dim3(MAX_THREAD);
@@ -530,7 +530,7 @@ void update_weighted(
     check_visibility_flag_kernel<<<block, thread>>>(
         map_struct,
         flag.get(),
-        frame_pose.inverse(),
+        frame_pose.inverse().cast<float>().matrix3x4(),
         cols, rows,
         K.fx, K.fy,
         K.cx, K.cy);
@@ -558,7 +558,7 @@ void update_weighted(
         depth,
         normal,
         image,
-        frame_pose.inverse(),
+        frame_pose.inverse().cast<float>().matrix3x4(),
         K.fx, K.fy,
         K.cx, K.cy);
 }
