@@ -3,7 +3,7 @@
 #include <fusion/math/vector.h>
 #include <fusion/core/cuda_utils.h>
 #include <fusion/mapping/prefix_sum.h>
-#include <fusion/mapping/cuda_constants.h>
+#include <fusion/mapping/device_tables.h>
 
 namespace fusion
 {

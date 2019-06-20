@@ -4,7 +4,6 @@
 #include <fusion/macros.h>
 #include <fusion/math/matrix.h>
 #include <fusion/math/vector.h>
-#include <cuda_runtime_api.h>
 
 namespace fusion
 {
@@ -12,7 +11,7 @@ namespace fusion
 struct FUSION_EXPORT HashEntry
 {
     FUSION_HOST_AND_DEVICE inline HashEntry();
-    FUSION_HOST_AND_DEVICE inline HashEntry(Vector3i pos, int next, int offset);
+    FUSION_HOST_AND_DEVICE inline HashEntry(Vector3i pos_, int next, int offset_);
     FUSION_HOST_AND_DEVICE inline HashEntry(const HashEntry &);
     FUSION_HOST_AND_DEVICE inline HashEntry &operator=(const HashEntry &);
     FUSION_HOST_AND_DEVICE inline bool operator==(const Vector3i &) const;
@@ -28,8 +27,8 @@ FUSION_HOST_AND_DEVICE inline HashEntry::HashEntry()
 {
 }
 
-FUSION_HOST_AND_DEVICE inline HashEntry::HashEntry(Vector3i pos, int ptr, int offset)
-    : pos_(pos), ptr_(ptr), offset_(offset)
+FUSION_HOST_AND_DEVICE inline HashEntry::HashEntry(Vector3i pos_, int ptr_, int offset_)
+    : pos_(pos_), ptr_(ptr_), offset_(offset_)
 {
 }
 
@@ -46,9 +45,9 @@ FUSION_HOST_AND_DEVICE inline HashEntry &HashEntry::operator=(const HashEntry &o
     return *this;
 }
 
-FUSION_HOST_AND_DEVICE inline bool HashEntry::operator==(const Vector3i &pos) const
+FUSION_HOST_AND_DEVICE inline bool HashEntry::operator==(const Vector3i &pos_) const
 {
-    return this->pos_ == pos;
+    return this->pos_ == pos_;
 }
 
 FUSION_HOST_AND_DEVICE inline bool HashEntry::operator==(const HashEntry &other) const
