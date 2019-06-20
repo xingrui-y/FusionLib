@@ -10,7 +10,7 @@ namespace fusion
 
 struct RgbReduction
 {
-    __device__ bool find_corresp(int &x, int &y)
+    FUSION_DEVICE inline bool find_corresp(int &x, int &y)
     {
         Vector4f pt = last_vmap.ptr(y)[x];
         if (pt.w < 0 || isnan(pt.x))
@@ -35,7 +35,7 @@ struct RgbReduction
         return false;
     }
 
-    __device__ float interp2(cv::cuda::PtrStep<float> image, float &x, float &y)
+    FUSION_DEVICE inline float interp2(cv::cuda::PtrStep<float> image, float &x, float &y)
     {
         int u = std::floor(x), v = std::floor(y);
         float coeff_x = x - u, coeff_y = y - v;
@@ -43,7 +43,7 @@ struct RgbReduction
                (image.ptr(v + 1)[u] * (1 - coeff_x) + image.ptr(v + 1)[u + 1] * coeff_x) * coeff_y;
     }
 
-    __device__ void compute_jacobian(int &k, float *sum)
+    FUSION_DEVICE inline void compute_jacobian(int &k, float *sum)
     {
         int y = k / cols;
         int x = k - y * cols;
@@ -74,7 +74,7 @@ struct RgbReduction
         sum[count] = (float)corresp_found;
     }
 
-    __device__ __forceinline__ void operator()()
+    FUSION_DEVICE inline void operator()()
     {
         float sum[29] = {0, 0, 0, 0, 0, 0, 0, 0,
                          0, 0, 0, 0, 0, 0, 0, 0,
@@ -117,18 +117,19 @@ __global__ void rgb_reduce_kernel(RgbReduction rr)
     rr();
 }
 
-void rgb_reduce(const cv::cuda::GpuMat &curr_intensity,
-                const cv::cuda::GpuMat &last_intensity,
-                const cv::cuda::GpuMat &last_vmap,
-                const cv::cuda::GpuMat &curr_vmap,
-                const cv::cuda::GpuMat &intensity_dx,
-                const cv::cuda::GpuMat &intensity_dy,
-                cv::cuda::GpuMat &sum,
-                cv::cuda::GpuMat &out,
-                const Sophus::SE3d &pose,
-                const IntrinsicMatrix K,
-                float *jtj, float *jtr,
-                float *residual)
+void rgb_reduce(
+    const cv::cuda::GpuMat &curr_intensity,
+    const cv::cuda::GpuMat &last_intensity,
+    const cv::cuda::GpuMat &last_vmap,
+    const cv::cuda::GpuMat &curr_vmap,
+    const cv::cuda::GpuMat &intensity_dx,
+    const cv::cuda::GpuMat &intensity_dy,
+    cv::cuda::GpuMat &sum,
+    cv::cuda::GpuMat &out,
+    const Sophus::SE3d &pose,
+    const IntrinsicMatrix K,
+    float *jtj, float *jtr,
+    float *residual)
 {
     int cols = curr_intensity.cols;
     int rows = curr_intensity.rows;
@@ -170,7 +171,7 @@ void rgb_reduce(const cv::cuda::GpuMat &curr_intensity,
 
 struct ICPReduction
 {
-    __device__ __inline__ bool searchPoint(int &x, int &y, Vector3f &vcurr_g, Vector3f &vlast_g, Vector3f &nlast_g) const
+    FUSION_DEVICE inline bool searchPoint(int &x, int &y, Vector3f &vcurr_g, Vector3f &vlast_g, Vector3f &nlast_g) const
     {
         Vector3f vlast_c = ToVector3(last_vmap_.ptr(y)[x]);
         if (isnan(vlast_c.x))
@@ -197,7 +198,7 @@ struct ICPReduction
         return (sine < angleThresh && dist <= distThresh && !isnan(ncurr_g.x) && !isnan(nlast_g.x));
     }
 
-    __device__ __inline__ void getRow(int &i, float *sum) const
+    FUSION_DEVICE inline void getRow(int &i, float *sum) const
     {
         int y = i / cols;
         int x = i - y * cols;
@@ -226,7 +227,7 @@ struct ICPReduction
         sum[count] = (float)found;
     }
 
-    __device__ __inline__ void operator()() const
+    FUSION_DEVICE inline void operator()() const
     {
         float sum[29] = {0, 0, 0, 0, 0,
                          0, 0, 0, 0, 0,
@@ -269,16 +270,17 @@ __global__ void icp_reduce_kernel(const ICPReduction icp)
     icp();
 }
 
-void icp_reduce(const cv::cuda::GpuMat &curr_vmap,
-                const cv::cuda::GpuMat &curr_nmap,
-                const cv::cuda::GpuMat &last_vmap,
-                const cv::cuda::GpuMat &last_nmap,
-                cv::cuda::GpuMat &sum,
-                cv::cuda::GpuMat &out,
-                const Sophus::SE3d &pose,
-                const IntrinsicMatrix K,
-                float *jtj, float *jtr,
-                float *residual)
+void icp_reduce(
+    const cv::cuda::GpuMat &curr_vmap,
+    const cv::cuda::GpuMat &curr_nmap,
+    const cv::cuda::GpuMat &last_vmap,
+    const cv::cuda::GpuMat &last_nmap,
+    cv::cuda::GpuMat &sum,
+    cv::cuda::GpuMat &out,
+    const Sophus::SE3d &pose,
+    const IntrinsicMatrix K,
+    float *jtj, float *jtr,
+    float *residual)
 {
     int cols = curr_vmap.cols;
     int rows = curr_vmap.rows;

@@ -7,21 +7,6 @@
 #include <fusion/mapping/voxel.h>
 #include <fusion/mapping/hash_entry.h>
 
-#define BLOCK_SIZE 8
-#define BLOCK_SIZE3 512
-#define BLOCK_SIZE_SUB_1 7
-#define WARP_SIZE 32
-#define MAX_THREAD 1024
-
-#define VOXEL_SIZE 0.04f
-#define MAX_DEPTH_FUSION 3.0f
-#define MIN_DEPTH_FUSION 0.3f
-#define MAX_DEPTH_RAYCAST 3.0f
-#define MIN_DEPTH_RAYCAST 0.3f
-#define NUM_VOXEL_BLOCKS 65535
-#define NUM_HASH_ENTRIES 100000
-#define NUM_EXCESS_ENTREIS 20000
-
 namespace fusion
 {
 

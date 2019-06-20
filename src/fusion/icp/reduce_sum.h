@@ -1,7 +1,7 @@
 #ifndef FUSION_ICP_REDUCE_SUM_H
 #define FUSION_ICP_REDUCE_SUM_H
 
-#include <cuda_runtime_api.h>
+#include <fusion/macros.h>
 
 #define MAX_WARP_SIZE 32
 
@@ -9,7 +9,7 @@ namespace fusion
 {
 
 template <typename T, int size>
-__device__ __forceinline__ void WarpReduce(T *val)
+FUSION_DEVICE inline void WarpReduce(T *val)
 {
 #pragma unroll
     for (int offset = MAX_WARP_SIZE / 2; offset > 0; offset /= 2)
@@ -23,7 +23,7 @@ __device__ __forceinline__ void WarpReduce(T *val)
 }
 
 template <typename T, int size>
-__device__ __forceinline__ void BlockReduce(T *val)
+FUSION_DEVICE inline void BlockReduce(T *val)
 {
     static __shared__ T shared[32 * size];
     int lane = threadIdx.x % MAX_WARP_SIZE;

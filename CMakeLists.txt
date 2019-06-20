@@ -5,13 +5,12 @@ find_package(CUDA 10.1 REQUIRED)
 find_package(Eigen3 3.3 REQUIRED)
 find_package(OpenCV 3.4 REQUIRED)
 
-add_library(fusion STATIC "")
+add_library(fusion SHARED "")
 
 target_sources(fusion
 PRIVATE
     # core modules
     src/fusion/core/cuda_imgproc.cu
-    src/fusion/core/intrinsic_matrix.cpp
 
     # icp
     src/fusion/icp/estimator.cu

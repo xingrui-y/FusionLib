@@ -2,6 +2,7 @@
 #include <fusion/math/matrix.h>
 #include <fusion/math/vector.h>
 #include <fusion/core/cuda_utils.h>
+#include <fusion/macros.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudaarithm.hpp>
 
@@ -10,19 +11,23 @@ namespace fusion
 namespace cuda
 {
 
-__device__ bool is_vertex_visible(Vector3f pt, Matrix3x4f inv_pose,
-                                  int cols, int rows, float fx,
-                                  float fy, float cx, float cy)
+FUSION_DEVICE inline bool is_vertex_visible(
+    Vector3f pt, Matrix3x4f inv_pose,
+    int cols, int rows, float fx,
+    float fy, float cx, float cy)
 {
     pt = inv_pose(pt);
     Vector2f pt2d = Vector2f(fx * pt.x / pt.z + cx, fy * pt.y / pt.z + cy);
-    return !(pt2d.x < 0 || pt2d.y < 0 || pt2d.x > cols - 1 || pt2d.y > rows - 1 || pt.z < param.zmin_update || pt.z > param.zmax_update);
+    return !(pt2d.x < 0 || pt2d.y < 0 ||
+             pt2d.x > cols - 1 || pt2d.y > rows - 1 ||
+             pt.z < param.zmin_update || pt.z > param.zmax_update);
 }
 
-__device__ bool is_block_visible(const Vector3i &block_pos,
-                                 Matrix3x4f inv_pose,
-                                 int cols, int rows, float fx,
-                                 float fy, float cx, float cy)
+FUSION_DEVICE inline bool is_block_visible(
+    const Vector3i &block_pos,
+    Matrix3x4f inv_pose,
+    int cols, int rows, float fx,
+    float fy, float cx, float cy)
 {
     float scale = param.block_size_metric();
 #pragma unroll
@@ -40,8 +45,9 @@ __device__ bool is_block_visible(const Vector3i &block_pos,
     return false;
 }
 
-__global__ void check_visibility_flag_kernel(MapStorage map_struct, uchar *flag, Matrix3x4f inv_pose,
-                                             int cols, int rows, float fx, float fy, float cx, float cy)
+__global__ void check_visibility_flag_kernel(
+    MapStorage map_struct, uchar *flag, Matrix3x4f inv_pose,
+    int cols, int rows, float fx, float fy, float cx, float cy)
 {
     const int idx = threadIdx.x + blockDim.x * blockIdx.x;
     if (idx >= param.num_total_hash_entries_)
@@ -85,23 +91,26 @@ __global__ void copy_visible_block_kernel(HashEntry *hash_table, HashEntry *visi
         visible_block[pos[idx]] = hash_table[idx];
 }
 
-__device__ Vector2f project(Vector3f pt, float fx, float fy, float cx, float cy)
+FUSION_DEVICE inline Vector2f project(
+    Vector3f pt, float fx, float fy, float cx, float cy)
 {
     return Vector2f(fx * pt.x / pt.z + cx, fy * pt.y / pt.z + cy);
 }
 
-__device__ Vector3f unproject(int x, int y, float z, float invfx, float invfy, float cx, float cy)
+FUSION_DEVICE inline Vector3f unproject(
+    int x, int y, float z, float invfx, float invfy, float cx, float cy)
 {
     return Vector3f(invfx * (x - cx) * z, invfy * (y - cy) * z, z);
 }
 
-__device__ Vector3f unproject_world(int x, int y, float z, float invfx,
-                                    float invfy, float cx, float cy, Matrix3x4f pose)
+FUSION_DEVICE inline Vector3f unproject_world(
+    int x, int y, float z, float invfx,
+    float invfy, float cx, float cy, Matrix3x4f pose)
 {
     return pose(unproject(x, y, z, invfx, invfy, cx, cy));
 }
 
-__device__ __inline__ int create_block(MapStorage &map_struct, const Vector3i block_pos)
+FUSION_DEVICE inline int create_block(MapStorage &map_struct, const Vector3i block_pos)
 {
     int hash_index;
     create_block(map_struct, block_pos, hash_index);
@@ -417,16 +426,17 @@ __global__ void update_map_weighted_kernel(
     }
 }
 
-void update(MapStorage map_struct,
-            MapState state,
-            const cv::cuda::GpuMat depth,
-            const cv::cuda::GpuMat image,
-            const Sophus::SE3d &frame_pose,
-            const IntrinsicMatrix K,
-            cv::cuda::GpuMat &cv_flag,
-            cv::cuda::GpuMat &cv_pos_array,
-            HashEntry *visible_blocks,
-            uint &visible_block_count)
+void update(
+    MapStorage map_struct,
+    MapState state,
+    const cv::cuda::GpuMat depth,
+    const cv::cuda::GpuMat image,
+    const Sophus::SE3d &frame_pose,
+    const IntrinsicMatrix K,
+    cv::cuda::GpuMat &cv_flag,
+    cv::cuda::GpuMat &cv_pos_array,
+    HashEntry *visible_blocks,
+    uint &visible_block_count)
 {
     if (cv_flag.empty())
         cv_flag.create(1, state.num_total_hash_entries_, CV_8UC1);

@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <cuda_runtime.h>
-#include <fusion/core/intrinsic_matrix.h>
 
 #define MAX_THREAD 1024
 #define MAX_WARP_SIZE 32
@@ -31,19 +30,5 @@ static inline int div_up(OP1 a, OP2 b)
 {
     return (int)((a + b - 1) / b);
 }
-
-struct DeviceIntrinsicMatrix
-{
-    inline DeviceIntrinsicMatrix() = default;
-    inline DeviceIntrinsicMatrix(fusion::IntrinsicMatrix K) : fx(K.fx), fy(K.fy), cx(K.cx), cy(K.cy), invfx(K.invfx), invfy(K.invfy)
-    {
-    }
-
-    inline DeviceIntrinsicMatrix(fusion::IntrinsicMatrixPtr K) : fx(K->fx), fy(K->fy), cx(K->cx), cy(K->cy), invfx(K->invfx), invfy(K->invfy)
-    {
-    }
-
-    float fx, fy, cx, cy, invfx, invfy;
-};
 
 #endif

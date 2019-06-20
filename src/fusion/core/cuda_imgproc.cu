@@ -9,300 +9,110 @@
 namespace fusion
 {
 
-void bilateral_filter_depth(const cv::cuda::GpuMat src, cv::cuda::GpuMat &dst)
-{
-    cv::cuda::bilateralFilter(src, dst, 5, 1, 1);
-}
-
-void build_depth_pyramid(const cv::cuda::GpuMat &base_depth, std::vector<cv::cuda::GpuMat> &pyramid, const int &max_level)
-{
-    assert(max_level == pyramid.size());
-    // base_depth.copyTo(pyramid[0]);
-    cv::cuda::bilateralFilter(base_depth, pyramid[0], 5, 1, 1);
-
-    for (int level = 1; level < max_level; ++level)
-    {
-        cv::cuda::resize(pyramid[level - 1], pyramid[level], cv::Size(0, 0), 0.5, 0.5);
-    }
-}
-
-void build_intensity_pyramid(const cv::cuda::GpuMat &base_intensity, std::vector<cv::cuda::GpuMat> &pyramid, const int &max_level)
-{
-    assert(max_level == pyramid.size());
-    base_intensity.copyTo(pyramid[0]);
-
-    for (int level = 1; level < max_level; ++level)
-    {
-        cv::cuda::pyrDown(pyramid[level - 1], pyramid[level]);
-    }
-}
-
-__global__ void compute_intensity_derivative_kernel(cv::cuda::PtrStepSz<float> intensity, cv::cuda::PtrStep<float> intensity_dx, cv::cuda::PtrStep<float> intensity_dy)
-{
-    const int x = threadIdx.x + blockDim.x * blockIdx.x;
-    const int y = threadIdx.y + blockDim.y * blockIdx.y;
-    if (x >= intensity.cols - 1 || y >= intensity.rows - 1)
-        return;
-
-    int x10 = max(x - 1, 0);
-    int x01 = min(x + 1, intensity.cols);
-    int y10 = max(y - 1, 0);
-    int y01 = min(y + 1, intensity.rows);
-
-    intensity_dx.ptr(y)[x] = (intensity.ptr(y)[x01] - intensity.ptr(y)[x10]) * 0.5;
-    intensity_dy.ptr(y)[x] = (intensity.ptr(y01)[x] - intensity.ptr(y10)[x]) * 0.5;
-}
-
-void build_intensity_derivative_pyramid(const std::vector<cv::cuda::GpuMat> &intensity, std::vector<cv::cuda::GpuMat> &sobel_x, std::vector<cv::cuda::GpuMat> &sobel_y)
-{
-    const int max_level = intensity.size();
-
-    assert(max_level == sobel_x.size());
-    assert(max_level == sobel_y.size());
-
-    for (int level = 0; level < max_level; ++level)
-    {
-        const int cols = intensity[level].cols;
-        const int rows = intensity[level].rows;
-
-        dim3 thread(8, 8);
-        dim3 block(div_up(cols, thread.x), div_up(rows, thread.y));
-
-        if (sobel_x[level].empty())
-            sobel_x[level].create(rows, cols, CV_32FC1);
-        if (sobel_y[level].empty())
-            sobel_y[level].create(rows, cols, CV_32FC1);
-
-        compute_intensity_derivative_kernel<<<block, thread>>>(intensity[level], sobel_x[level], sobel_y[level]);
-
-        // cv::Ptr<cv::cuda::Filter> sobel_filter_x = cv::cuda::createSobelFilter(CV_32FC1, CV_32FC1, 1, 0, 3, 1.0 / 8);
-        // cv::Ptr<cv::cuda::Filter> sobel_filter_y = cv::cuda::createSobelFilter(CV_32FC1, CV_32FC1, 0, 1, 3, 1.0 / 8);
-        // sobel_filter_x->apply(intensity[level], sobel_x[level]);
-        // sobel_filter_y->apply(intensity[level], sobel_y[level]);
-    }
-}
-
-__global__ void back_project_kernel(const cv::cuda::PtrStepSz<float> depth, cv::cuda::PtrStep<Vector4f> vmap, DeviceIntrinsicMatrix intrinsics)
-{
-    const int x = threadIdx.x + blockDim.x * blockIdx.x;
-    const int y = threadIdx.y + blockDim.y * blockIdx.y;
-    if (x > depth.cols - 1 || y > depth.rows - 1)
-        return;
-
-    float z = depth.ptr(y)[x];
-    z = (z == z) ? z : nanf("NAN");
-
-    vmap.ptr(y)[x] = Vector4f(z * (x - intrinsics.cx) * intrinsics.invfx, z * (y - intrinsics.cy) * intrinsics.invfy, z, 1.0f);
-}
-
-void build_point_cloud_pyramid(const std::vector<cv::cuda::GpuMat> &depth_pyr, std::vector<cv::cuda::GpuMat> &point_cloud_pyr, const IntrinsicMatrixPyramidPtr intrinsics_pyr)
-{
-    assert(depth_pyr.size() == point_cloud_pyr.size());
-    assert(intrinsics_pyr->get_max_level() == depth_pyr.size());
-
-    for (int level = 0; level < depth_pyr.size(); ++level)
-    {
-        const cv::cuda::GpuMat &depth = depth_pyr[level];
-        cv::cuda::GpuMat &point_cloud = point_cloud_pyr[level];
-        IntrinsicMatrixPtr intrinsic_matrix = (*intrinsics_pyr)[level];
-
-        const int cols = depth.cols;
-        const int rows = depth.rows;
-
-        if (point_cloud.empty())
-            point_cloud.create(rows, cols, CV_32FC4);
-
-        dim3 thread(8, 8);
-        dim3 block(div_up(cols, thread.x), div_up(rows, thread.y));
-
-        back_project_kernel<<<block, thread>>>(depth, point_cloud, *intrinsic_matrix);
-    }
-}
-
-__global__ void compute_nmap_kernel(cv::cuda::PtrStepSz<Vector4f> vmap, cv::cuda::PtrStep<Vector4f> nmap)
-{
-    const int x = threadIdx.x + blockDim.x * blockIdx.x;
-    const int y = threadIdx.y + blockDim.y * blockIdx.y;
-    if (x >= vmap.cols - 1 || y >= vmap.rows - 1)
-        return;
-
-    int x10 = max(x - 1, 0);
-    int x01 = min(x + 1, vmap.cols);
-    int y10 = max(y - 1, 0);
-    int y01 = min(y + 1, vmap.rows);
-
-    Vector3f v00 = ToVector3(vmap.ptr(y)[x10]);
-    Vector3f v01 = ToVector3(vmap.ptr(y)[x01]);
-    Vector3f v10 = ToVector3(vmap.ptr(y10)[x]);
-    Vector3f v11 = ToVector3(vmap.ptr(y01)[x]);
-
-    nmap.ptr(y)[x] = Vector4f(normalised((v01 - v00).cross(v11 - v10)), 1.f);
-}
-
-void build_normal_pyramid(const std::vector<cv::cuda::GpuMat> &vmap_pyr, std::vector<cv::cuda::GpuMat> &nmap_pyr)
-{
-    assert(vmap_pyr.size() == nmap_pyr.size());
-    for (int level = 0; level < vmap_pyr.size(); ++level)
-    {
-        const cv::cuda::GpuMat &vmap = vmap_pyr[level];
-        cv::cuda::GpuMat &nmap = nmap_pyr[level];
-
-        const int cols = vmap.cols;
-        const int rows = vmap.rows;
-
-        if (nmap.empty())
-            nmap.create(rows, cols, CV_32FC4);
-
-        dim3 thread(8, 8);
-        dim3 block(div_up(cols, thread.x), div_up(rows, thread.y));
-
-        compute_nmap_kernel<<<block, thread>>>(vmap, nmap);
-    }
-}
-
-void resize_device_map(std::vector<cv::cuda::GpuMat> &map_pyr)
-{
-    for (int level = 1; level < map_pyr.size(); ++level)
-    {
-        cv::cuda::resize(map_pyr[level - 1], map_pyr[level], cv::Size(), 0.5, 0.5);
-    }
-}
-
-__global__ void render_scene_kernel(const cv::cuda::PtrStep<Vector4f> vmap, const cv::cuda::PtrStep<Vector4f> nmap, const Vector3f light_pos, cv::cuda::PtrStepSz<uchar4> dst)
-{
-    const int x = threadIdx.x + blockIdx.x * blockDim.x;
-    const int y = threadIdx.y + blockIdx.y * blockDim.y;
-    if (x >= dst.cols || y >= dst.rows)
-        return;
-
-    Vector3f color;
-    Vector3f point = ToVector3(vmap.ptr(y)[x]);
-    if (isnan(point.x))
-    {
-        const Vector3f bgr1 = Vector3f(4.f / 255.f, 2.f / 255.f, 2.f / 255.f);
-        // const Vector3f bgr2 = ToVector3(120.f / 255.f, 120.f / 255.f, 236.f / 255.f);
-        const Vector3f bgr2 = Vector3f(0, 0, 0);
-        float w = static_cast<float>(y) / dst.rows;
-        color = bgr1 * (1 - w) + bgr2 * w;
-    }
-    else
-    {
-        Vector3f P = point;
-        Vector3f N = ToVector3(nmap.ptr(y)[x]);
-
-        const float Ka = 0.3f; //ambient coeff
-        const float Kd = 0.5f; //diffuse coeff
-        const float Ks = 0.2f; //specular coeff
-        const float n = 20.f;  //specular power
-
-        const float Ax = 1.f; //ambient color,  can be RGB
-        const float Dx = 1.f; //diffuse color,  can be RGB
-        const float Sx = 1.f; //specular color, can be RGB
-        const float Lx = 1.f; //light color
-
-        Vector3f L = normalised(light_pos - P);
-        Vector3f V = normalised(Vector3f(0.f, 0.f, 0.f) - P);
-        Vector3f R = normalised(2 * N * (N * L) - L);
-
-        float Ix = Ax * Ka * Dx + Lx * Kd * Dx * fmax(0.f, (N * L)) + Lx * Ks * Sx * pow(fmax(0.f, (R * V)), n);
-        color = Vector3f(Ix, Ix, Ix);
-    }
-
-    uchar4 out;
-    out.x = static_cast<unsigned char>(__saturatef(color.x) * 255.f);
-    out.y = static_cast<unsigned char>(__saturatef(color.y) * 255.f);
-    out.z = static_cast<unsigned char>(__saturatef(color.z) * 255.f);
-    out.w = 255.0;
-    dst.ptr(y)[x] = out;
-}
-
-dim3 create_grid(dim3 block, int cols, int rows)
+FUSION_HOST inline dim3 createGrid(dim3 block, int cols, int rows)
 {
     return dim3(div_up(cols, block.x), div_up(rows, block.y));
 }
 
-void render_scene(const cv::cuda::GpuMat vmap, const cv::cuda::GpuMat nmap, cv::cuda::GpuMat &image)
+FUSION_DEVICE inline Vector4c renderPoint(
+    const Vector3f &point,
+    const Vector3f &normal,
+    const Vector3f &image,
+    const Vector3f &light_pos)
 {
-    dim3 thread(8, 4);
-    dim3 block(div_up(vmap.cols, thread.x), div_up(vmap.rows, thread.y));
+    Vector3f colour(4.f / 255.f, 2.f / 255.f, 2.f / 255.f);
+    if (!isnan(point.x))
+    {
+        const float Ka = 0.3f; //ambient coeff
+        const float Kd = 0.5f; //diffuse coeff
+        const float Ks = 0.2f; //specular coeff
+        const float n = 20.f;  //specular power
 
-    if (image.empty())
-        image.create(vmap.rows, vmap.cols, CV_8UC4);
+        const float Ax = image.x; //ambient color,  can be RGB
+        const float Dx = image.y; //diffuse color,  can be RGB
+        const float Sx = image.z; //specular color, can be RGB
+        const float Lx = 1.f;     //light color
 
-    render_scene_kernel<<<block, thread>>>(vmap, nmap, Vector3f(5, 5, 5), image);
+        Vector3f L = normalised(light_pos - point);
+        Vector3f V = normalised(Vector3f(0.f, 0.f, 0.f) - point);
+        Vector3f R = normalised(2 * normal * (normal * L) - L);
+
+        float Ix = Ax * Ka * Dx + Lx * Kd * Dx * fmax(0.f, (normal * L)) + Lx * Ks * Sx * pow(fmax(0.f, (R * V)), n);
+        colour = Vector3f(Ix, Ix, Ix);
+    }
+
+    return Vector4c(
+        static_cast<unsigned char>(__saturatef(colour.x) * 255.f),
+        static_cast<unsigned char>(__saturatef(colour.y) * 255.f),
+        static_cast<unsigned char>(__saturatef(colour.z) * 255.f),
+        255);
 }
 
-__global__ void render_scene_textured_kernel(const cv::cuda::PtrStep<Vector4f> vmap,
-                                             const cv::cuda::PtrStep<Vector4f> nmap,
-                                             const cv::cuda::PtrStep<Vector3c> image,
-                                             const Vector3f light_pos,
-                                             cv::cuda::PtrStepSz<uchar4> dst)
+__global__ void renderSceneK(
+    const cv::cuda::PtrStep<Vector4f> vmap,
+    const cv::cuda::PtrStep<Vector4f> nmap,
+    const Vector3f light_pos,
+    cv::cuda::PtrStepSz<Vector4c> dst)
 {
     const int x = threadIdx.x + blockIdx.x * blockDim.x;
     const int y = threadIdx.y + blockIdx.y * blockDim.y;
     if (x >= dst.cols || y >= dst.rows)
         return;
 
-    Vector3f color;
     Vector3f point = ToVector3(vmap.ptr(y)[x]);
-    Vector3f pixel = ToVector3f(image.ptr(y)[x]) / 255.f;
-    if (isnan(point.x))
-    {
-        const Vector3f bgr1 = Vector3f(4.f / 255.f, 2.f / 255.f, 2.f / 255.f);
-        const Vector3f bgr2 = Vector3f(236.f / 255.f, 120.f / 255.f, 120.f / 255.f);
+    Vector3f normal = ToVector3(nmap.ptr(y)[x]);
+    Vector3f pixel(1.f);
 
-        float w = static_cast<float>(y) / dst.rows;
-        color = bgr1 * (1 - w) + bgr2 * w;
-    }
-    else
-    {
-        Vector3f P = point;
-        Vector3f N = ToVector3(nmap.ptr(y)[x]);
-
-        const float Ka = 0.3f; //ambient coeff
-        const float Kd = 0.5f; //diffuse coeff
-        const float Ks = 0.2f; //specular coeff
-        const float n = 20.f;  //specular power
-
-        // const float Ax = 1.f;
-        // const float Dx = 1.f;
-        // const float Sx = 1.f;
-        const float Lx = 2.f; //light color
-
-        Vector3f L = normalised(light_pos - P);
-        Vector3f V = normalised(Vector3f(0.f, 0.f, 0.f) - P);
-        Vector3f R = normalised(2 * N * (N * L) - L);
-
-        float Ix = pixel.x * Ka * pixel.x + Lx * Kd * pixel.x * fmax(0.f, (N * L)) + Lx * Ks * pixel.x * pow(fmax(0.f, (R * V)), n);
-        float Iy = pixel.y * Ka * pixel.y + Lx * Kd * pixel.y * fmax(0.f, (N * L)) + Lx * Ks * pixel.y * pow(fmax(0.f, (R * V)), n);
-        float Iz = pixel.z * Ka * pixel.z + Lx * Kd * pixel.z * fmax(0.f, (N * L)) + Lx * Ks * pixel.z * pow(fmax(0.f, (R * V)), n);
-        color = Vector3f(Ix, Iy, Iz);
-    }
-
-    uchar4 out;
-    out.x = static_cast<unsigned char>(__saturatef(color.x) * 255.f);
-    out.y = static_cast<unsigned char>(__saturatef(color.y) * 255.f);
-    out.z = static_cast<unsigned char>(__saturatef(color.z) * 255.f);
-    out.w = 255.0;
-    dst.ptr(y)[x] = out;
+    dst.ptr(y)[x] = renderPoint(point, normal, pixel, light_pos);
 }
 
-void render_scene_textured(const cv::cuda::GpuMat vmap, const cv::cuda::GpuMat nmap, const cv::cuda::GpuMat image, cv::cuda::GpuMat &out)
+void renderScene(const cv::cuda::GpuMat vmap, const cv::cuda::GpuMat nmap, cv::cuda::GpuMat &image)
 {
-    dim3 thread(8, 4);
-    dim3 block(div_up(vmap.cols, thread.x), div_up(vmap.rows, thread.y));
+    dim3 block(8, 8);
+    dim3 grid = createGrid(block, vmap.cols, vmap.rows);
+
+    if (image.empty())
+        image.create(vmap.rows, vmap.cols, CV_8UC4);
+
+    renderSceneK<<<grid, block>>>(vmap, nmap, Vector3f(5, 5, 5), image);
+}
+
+__global__ void renderSceneTexturedK(
+    const cv::cuda::PtrStep<Vector4f> vmap,
+    const cv::cuda::PtrStep<Vector4f> nmap,
+    const cv::cuda::PtrStep<Vector3c> image,
+    const Vector3f light_pos,
+    cv::cuda::PtrStepSz<Vector4c> dst)
+{
+    const int x = threadIdx.x + blockIdx.x * blockDim.x;
+    const int y = threadIdx.y + blockIdx.y * blockDim.y;
+    if (x >= dst.cols || y >= dst.rows)
+        return;
+
+    Vector3f point = ToVector3(vmap.ptr(y)[x]);
+    Vector3f normal = ToVector3(nmap.ptr(y)[x]);
+    Vector3f pixel = ToVector3f(image.ptr(y)[x]) / 255.f;
+
+    dst.ptr(y)[x] = renderPoint(point, normal, pixel, light_pos);
+}
+
+void renderSceneTextured(const cv::cuda::GpuMat vmap, const cv::cuda::GpuMat nmap, const cv::cuda::GpuMat image, cv::cuda::GpuMat &out)
+{
+    dim3 block(8, 8);
+    dim3 grid = createGrid(block, vmap.cols, vmap.rows);
 
     if (out.empty())
         out.create(vmap.rows, vmap.cols, CV_8UC4);
 
-    render_scene_textured_kernel<<<block, thread>>>(vmap, nmap, image, Vector3f(5, 5, 5), out);
+    renderSceneTexturedK<<<grid, block>>>(vmap, nmap, image, Vector3f(5, 5, 5), out);
 }
 
-__global__ void convert_image_to_semi_dense_kernel(const cv::cuda::PtrStepSz<float> image,
-                                                   const cv::cuda::PtrStepSz<float> intensity_dx,
-                                                   const cv::cuda::PtrStepSz<float> intensity_dy,
-                                                   cv::cuda::PtrStepSz<float> semi,
-                                                   float th_dx, float th_dy)
+__global__ void ToSemiDenseImageK(
+    const cv::cuda::PtrStepSz<float> image,
+    const cv::cuda::PtrStepSz<float> intensity_dx,
+    const cv::cuda::PtrStepSz<float> intensity_dy,
+    cv::cuda::PtrStepSz<float> semi,
+    float th_dx, float th_dy)
 {
     const int x = threadIdx.x + blockIdx.x * blockDim.x;
     const int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -326,9 +136,9 @@ void convert_image_to_semi_dense(const cv::cuda::GpuMat image, const cv::cuda::G
         semi.create(image.size(), image.type());
 
     dim3 block(8, 4);
-    dim3 grid = create_grid(block, image.cols, image.rows);
+    dim3 grid = createGrid(block, image.cols, image.rows);
 
-    convert_image_to_semi_dense_kernel<<<grid, block>>>(image, dx, dy, semi, th_dx, th_dy);
+    ToSemiDenseImageK<<<grid, block>>>(image, dx, dy, semi, th_dx, th_dy);
 }
 
 void build_semi_dense_pyramid(const std::vector<cv::cuda::GpuMat> image_pyr, const std::vector<cv::cuda::GpuMat> dx_pyr, const std::vector<cv::cuda::GpuMat> dy_pyr, std::vector<cv::cuda::GpuMat> &semi_pyr, float th_dx, float th_dy)
@@ -342,7 +152,7 @@ void build_semi_dense_pyramid(const std::vector<cv::cuda::GpuMat> image_pyr, con
     }
 }
 
-__device__ inline Vector3c interpolate_bilinear(const cv::cuda::PtrStepSz<Vector3c> image, float x, float y)
+FUSION_DEVICE inline Vector3c interpolate_bilinear(const cv::cuda::PtrStepSz<Vector3c> image, float x, float y)
 {
     int u = std::floor(x), v = std::floor(y);
     float coeff_x = x - (float)u, coeff_y = y - (float)v;
@@ -354,7 +164,7 @@ __device__ inline Vector3c interpolate_bilinear(const cv::cuda::PtrStepSz<Vector
 __global__ void warp_image_kernel(const cv::cuda::PtrStepSz<Vector3c> src,
                                   const cv::cuda::PtrStep<Vector4f> vmap_dst,
                                   const Matrix3x4f pose,
-                                  const DeviceIntrinsicMatrix K,
+                                  const IntrinsicMatrix K,
                                   cv::cuda::PtrStep<Vector3c> dst)
 {
     const int x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -379,9 +189,116 @@ void warp_image(const cv::cuda::GpuMat src, const cv::cuda::GpuMat vmap_dst, con
         dst.create(src.size(), src.type());
 
     dim3 block(8, 4);
-    dim3 grid = create_grid(block, src.cols, src.rows);
+    dim3 grid = createGrid(block, src.cols, src.rows);
 
     warp_image_kernel<<<grid, block>>>(src, vmap_dst, pose.cast<float>().matrix3x4(), K, dst);
+}
+
+FUSION_HOST void filterDepthBilateral(const cv::cuda::GpuMat src, cv::cuda::GpuMat &dst)
+{
+    cv::cuda::bilateralFilter(src, dst, 5, 1, 1);
+}
+
+FUSION_HOST void pyrDownDepth(const cv::cuda::GpuMat src, cv::cuda::GpuMat &dst)
+{
+    cv::cuda::resize(src, dst, cv::Size(0, 0), 0.5, 0.5);
+}
+
+FUSION_HOST void pyrDownImage(const cv::cuda::GpuMat src, cv::cuda::GpuMat &dst)
+{
+    cv::cuda::pyrDown(src, dst);
+}
+
+FUSION_HOST void pyrDownVMap(const cv::cuda::GpuMat src, cv::cuda::GpuMat &dst)
+{
+    cv::cuda::resize(src, dst, cv::Size(0, 0), 0.5, 0.5);
+}
+
+__global__ void computeDerivativeK(
+    cv::cuda::PtrStepSz<float> image,
+    cv::cuda::PtrStep<float> dx,
+    cv::cuda::PtrStep<float> dy)
+{
+    const int x = threadIdx.x + blockDim.x * blockIdx.x;
+    const int y = threadIdx.y + blockDim.y * blockIdx.y;
+    if (x >= image.cols - 1 || y >= image.rows - 1)
+        return;
+
+    int x10 = max(x - 1, 0);
+    int x01 = min(x + 1, image.cols);
+    int y10 = max(y - 1, 0);
+    int y01 = min(y + 1, image.rows);
+
+    dx.ptr(y)[x] = (image.ptr(y)[x01] - image.ptr(y)[x10]) * 0.5;
+    dy.ptr(y)[x] = (image.ptr(y01)[x] - image.ptr(y10)[x]) * 0.5;
+}
+
+FUSION_HOST void computeDerivative(const cv::cuda::GpuMat image, cv::cuda::GpuMat &dx, cv::cuda::GpuMat &dy)
+{
+    if (dx.empty())
+        dx.create(image.size(), image.type());
+    if (dy.empty())
+        dy.create(image.size(), image.type());
+
+    dim3 block(8, 8);
+    dim3 grid(div_up(image.cols, block.x), div_up(image.rows, block.y));
+
+    computeDerivativeK<<<grid, block>>>(image, dx, dy);
+}
+
+__global__ void backProjectDepthK(const cv::cuda::PtrStepSz<float> depth, cv::cuda::PtrStep<Vector4f> vmap, IntrinsicMatrix intrinsics)
+{
+    const int x = threadIdx.x + blockDim.x * blockIdx.x;
+    const int y = threadIdx.y + blockDim.y * blockIdx.y;
+    if (x > depth.cols - 1 || y > depth.rows - 1)
+        return;
+
+    float z = depth.ptr(y)[x];
+    z = (z == z) ? z : nanf("NAN");
+
+    vmap.ptr(y)[x] = Vector4f(z * (x - intrinsics.cx) * intrinsics.invfx, z * (y - intrinsics.cy) * intrinsics.invfy, z, 1.0f);
+}
+
+FUSION_HOST void backProjectDepth(const cv::cuda::GpuMat depth, cv::cuda::GpuMat &vmap, const IntrinsicMatrix &K)
+{
+    if (vmap.empty())
+        vmap.create(depth.size(), CV_32FC4);
+
+    dim3 block(8, 8);
+    dim3 grid = createGrid(block, depth.cols, depth.rows);
+
+    backProjectDepthK<<<grid, block>>>(depth, vmap, K);
+}
+
+__global__ void computeNMapK(cv::cuda::PtrStepSz<Vector4f> vmap, cv::cuda::PtrStep<Vector4f> nmap)
+{
+    const int x = threadIdx.x + blockDim.x * blockIdx.x;
+    const int y = threadIdx.y + blockDim.y * blockIdx.y;
+    if (x >= vmap.cols - 1 || y >= vmap.rows - 1)
+        return;
+
+    int x10 = max(x - 1, 0);
+    int x01 = min(x + 1, vmap.cols);
+    int y10 = max(y - 1, 0);
+    int y01 = min(y + 1, vmap.rows);
+
+    Vector3f v00 = ToVector3(vmap.ptr(y)[x10]);
+    Vector3f v01 = ToVector3(vmap.ptr(y)[x01]);
+    Vector3f v10 = ToVector3(vmap.ptr(y10)[x]);
+    Vector3f v11 = ToVector3(vmap.ptr(y01)[x]);
+
+    nmap.ptr(y)[x] = Vector4f(normalised((v01 - v00).cross(v11 - v10)), 1.f);
+}
+
+FUSION_HOST void computeNMap(const cv::cuda::GpuMat vmap, cv::cuda::GpuMat &nmap)
+{
+    if (nmap.empty())
+        nmap.create(vmap.size(), vmap.type());
+
+    dim3 block(8, 8);
+    dim3 grid = createGrid(block, vmap.cols, vmap.rows);
+
+    computeNMapK<<<grid, block>>>(vmap, nmap);
 }
 
 } // namespace fusion
