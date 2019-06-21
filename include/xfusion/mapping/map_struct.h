@@ -10,7 +10,7 @@ namespace fusion
 {
 
 // Map info
-struct MapState
+struct FUSION_EXPORT MapState
 {
     // The total number of buckets in the map
     // NOTE: buckets are allocated for each main entry
@@ -47,14 +47,14 @@ struct MapState
 
 FUSION_DEVICE extern MapState param;
 
-struct RenderingBlock
+struct FUSION_EXPORT RenderingBlock
 {
     Vector2s upper_left;
     Vector2s lower_right;
     Vector2f zrange;
 };
 
-struct MapStorage
+struct FUSION_EXPORT MapStorage
 {
     int *heap_mem_;
     int *excess_counter_;
@@ -65,7 +65,7 @@ struct MapStorage
 };
 
 template <bool Device>
-struct MapStruct
+struct FUSION_EXPORT MapStruct
 {
     FUSION_HOST MapStruct();
     FUSION_HOST void create();

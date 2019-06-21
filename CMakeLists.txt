@@ -11,6 +11,7 @@ target_sources(XFusion
 PRIVATE
     # core modules
     src/xfusion/core/cuda_imgproc.cu
+    src/xfusion/core/device_malloc.cpp
 
     # icp
     src/xfusion/icp/estimator.cu
