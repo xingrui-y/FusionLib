@@ -154,13 +154,7 @@ void rgb_reduce(
     rr.out = sum;
 
     rgb_reduce_kernel<<<96, 224>>>(rr);
-    safe_call(cudaDeviceSynchronize());
-    safe_call(cudaGetLastError());
-
     cv::cuda::reduce(sum, out, 0, cv::REDUCE_SUM);
-
-    safe_call(cudaDeviceSynchronize());
-    safe_call(cudaGetLastError());
 
     cv::Mat host_data;
     out.download(host_data);

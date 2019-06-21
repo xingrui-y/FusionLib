@@ -253,10 +253,13 @@ __global__ void backProjectDepthK(const cv::cuda::PtrStepSz<float> depth, cv::cu
     if (x > depth.cols - 1 || y > depth.rows - 1)
         return;
 
+    vmap.ptr(y)[x] = Vector4f(nanf("NAN"), nanf("NAN"), nanf("NAN"), -1.0f);
     float z = depth.ptr(y)[x];
-    z = (z == z) ? z : nanf("NAN");
-
-    vmap.ptr(y)[x] = Vector4f(z * (x - intrinsics.cx) * intrinsics.invfx, z * (y - intrinsics.cy) * intrinsics.invfy, z, 1.0f);
+    // z = (z == z) ? z : nanf("NAN");
+    if(z > 0.3f && z < 5.0f)
+    {
+        vmap.ptr(y)[x] = Vector4f(z * (x - intrinsics.cx) * intrinsics.invfx, z * (y - intrinsics.cy) * intrinsics.invfy, z, 1.0f);
+    }
 }
 
 FUSION_HOST void backProjectDepth(const cv::cuda::GpuMat depth, cv::cuda::GpuMat &vmap, const IntrinsicMatrix &K)
