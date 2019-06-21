@@ -1,10 +1,9 @@
-#ifndef __SE3_REDUCTION__
-#define __SE3_REDUCTION__
+#ifndef FUSION_ICP_ESTIMATION_H
+#define FUSION_ICP_ESTIMATION_H
 
 #include <sophus/se3.hpp>
-#include <xfusion/core/intrinsic_matrix.h>
 #include <opencv2/cudaarithm.hpp>
-#include <thrust/device_vector.h>
+#include <xfusion/core/intrinsic_matrix.h>
 
 namespace fusion
 {

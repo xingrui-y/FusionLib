@@ -2,7 +2,6 @@
 #define FUSION_VOXEL_HASHING_MAP_STRUCT
 
 #include <iostream>
-#include <cuda_runtime.h>
 #include <xfusion/macros.h>
 #include <xfusion/mapping/voxel.h>
 #include <xfusion/mapping/hash_entry.h>

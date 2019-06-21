@@ -5,6 +5,7 @@
 #include <xfusion/macros.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudaarithm.hpp>
+#include <thrust/device_vector.h>
 
 namespace fusion
 {

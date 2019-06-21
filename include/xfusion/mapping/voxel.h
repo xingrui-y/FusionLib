@@ -4,7 +4,6 @@
 #include <xfusion/macros.h>
 #include <xfusion/math/matrix.h>
 #include <xfusion/math/vector.h>
-#include <cuda_runtime_api.h>
 
 namespace fusion
 {
