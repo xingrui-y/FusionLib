@@ -68,7 +68,9 @@ template <bool Device>
 struct FUSION_EXPORT MapStruct
 {
     FUSION_HOST MapStruct();
+    FUSION_HOST MapStruct(MapState param);
     FUSION_HOST void create();
+    FUSION_HOST void create(MapState param);
     FUSION_HOST void release();
     FUSION_HOST bool empty();
     FUSION_HOST void copyTo(MapStruct<Device> &) const;

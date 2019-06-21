@@ -8,6 +8,10 @@ namespace fusion
 {
 
 FUSION_DEVICE MapState param;
+FUSION_HOST inline void uploadMapState(MapState state)
+{
+    safe_call(cudaMemcpyToSymbol(param, &state, sizeof(MapState)));
+}
 
 template <bool Device>
 MapStruct<Device>::MapStruct()
@@ -23,7 +27,13 @@ MapStruct<Device>::MapStruct()
     state.num_max_rendering_blocks_ = 100000;
     state.num_max_mesh_triangles_ = 20000000;
 
-    safe_call(cudaMemcpyToSymbol(param, &state, sizeof(MapState)));
+    uploadMapState(state);
+}
+
+template <bool Device>
+MapStruct<Device>::MapStruct(MapState state) : state(state)
+{
+    uploadMapState(state);
 }
 
 __global__ void reset_hash_entries_kernel(HashEntry *hash_table, int max_num)
@@ -303,6 +313,14 @@ FUSION_HOST void MapStruct<Device>::create()
 }
 
 template <bool Device>
+FUSION_HOST void MapStruct<Device>::create(MapState map_state)
+{
+    this->state = map_state;
+    uploadMapState(state);
+    create();
+}
+
+template <bool Device>
 FUSION_HOST void MapStruct<Device>::release()
 {
     if (Device)
@@ -325,6 +343,8 @@ FUSION_HOST void MapStruct<Device>::release()
         delete[] map.excess_counter_;
         delete[] map.voxels_;
     }
+
+    std::cout << (Device ? "device" : "host") << " map released." << std::endl;
 }
 
 template <bool Device>

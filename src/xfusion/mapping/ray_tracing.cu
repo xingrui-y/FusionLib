@@ -28,14 +28,14 @@ struct RenderingBlockDelegate
     mutable cv::cuda::PtrStep<float> zrange_y;
     RenderingBlock *rendering_blocks;
 
-    __device__ __forceinline__ Vector2f project(const Vector3f &pt) const
+    FUSION_DEVICE inline Vector2f project(const Vector3f &pt) const
     {
         return Vector2f(fx * pt.x / pt.z + cx, fy * pt.y / pt.z + cy);
     }
 
     // compare val with the old value stored in *add
     // and write the bigger one to *add
-    __device__ __forceinline__ void atomic_max(float *add, float val) const
+    FUSION_DEVICE inline void atomic_max(float *add, float val) const
     {
         int *address_as_i = (int *)add;
         int old = *address_as_i, assumed;
@@ -48,7 +48,7 @@ struct RenderingBlockDelegate
 
     // compare val with the old value stored in *add
     // and write the smaller one to *add
-    __device__ __forceinline__ void atomic_min(float *add, float val) const
+    FUSION_DEVICE inline void atomic_min(float *add, float val) const
     {
         int *address_as_i = (int *)add;
         int old = *address_as_i, assumed;
@@ -59,7 +59,7 @@ struct RenderingBlockDelegate
         } while (assumed != old);
     }
 
-    __device__ __forceinline__ bool create_rendering_block(const Vector3i &block_pos, RenderingBlock &block) const
+    FUSION_DEVICE inline bool create_rendering_block(const Vector3i &block_pos, RenderingBlock &block) const
     {
         block.upper_left = Vector2s(zrange_x.cols, zrange_x.rows);
         block.lower_right = Vector2s(-1, -1);
@@ -124,7 +124,7 @@ struct RenderingBlockDelegate
         return true;
     }
 
-    __device__ __forceinline__ void create_rendering_block_list(int offset, const RenderingBlock &block, int &nx, int &ny) const
+    FUSION_DEVICE inline void create_rendering_block_list(int offset, const RenderingBlock &block, int &nx, int &ny) const
     {
         for (int y = 0; y < ny; ++y)
         {
@@ -150,7 +150,7 @@ struct RenderingBlockDelegate
         }
     }
 
-    __device__ __forceinline__ void operator()() const
+    FUSION_DEVICE inline void operator()() const
     {
         int x = threadIdx.x + blockDim.x * blockIdx.x;
 
@@ -183,7 +183,7 @@ struct RenderingBlockDelegate
             create_rendering_block_list(offset, block, nx, ny);
     }
 
-    __device__ __forceinline__ void fill_rendering_blocks() const
+    FUSION_DEVICE inline void fill_rendering_blocks() const
     {
         int x = threadIdx.x;
         int y = threadIdx.y;
@@ -287,7 +287,7 @@ struct MapRenderingDelegate
     float invfx, invfy, cx, cy;
     Matrix3x4f pose, inv_pose;
 
-    __device__ __forceinline__ float read_sdf(const Vector3f &pt3d, bool &valid)
+    FUSION_DEVICE inline float read_sdf(const Vector3f &pt3d, bool &valid)
     {
         Voxel *voxel = NULL;
         find_voxel(map_struct, ToVector3i(pt3d), voxel);
@@ -303,7 +303,7 @@ struct MapRenderingDelegate
         }
     }
 
-    __device__ __forceinline__ float read_sdf_interped(const Vector3f &pt, bool &valid)
+    FUSION_DEVICE inline float read_sdf_interped(const Vector3f &pt, bool &valid)
     {
         Vector3f xyz = pt - floor(pt);
         float sdf[2], result[4];
@@ -337,12 +337,12 @@ struct MapRenderingDelegate
         return (1.0f - xyz.z) * result[2] + xyz.z * result[3];
     }
 
-    __device__ __forceinline__ Vector3f unproject(const int &x, const int &y, const float &z) const
+    FUSION_DEVICE inline Vector3f unproject(const int &x, const int &y, const float &z) const
     {
         return Vector3f((x - cx) * invfx * z, (y - cy) * invfy * z, z);
     }
 
-    __device__ __forceinline__ void operator()()
+    FUSION_DEVICE inline void operator()()
     {
         const int x = threadIdx.x + blockDim.x * blockIdx.x;
         const int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -423,7 +423,7 @@ struct MapRenderingDelegate
         }
     }
 
-    __device__ __forceinline__ Vector3c read_colour(Vector3f pt3d, bool &valid)
+    FUSION_DEVICE inline Vector3c read_colour(Vector3f pt3d, bool &valid)
     {
         Voxel *voxel = NULL;
         find_voxel(map_struct, ToVector3i(pt3d), voxel);
@@ -439,7 +439,7 @@ struct MapRenderingDelegate
         }
     }
 
-    __device__ __forceinline__ Vector3c read_colour_interpolated(Vector3f pt, bool &valid)
+    FUSION_DEVICE inline Vector3c read_colour_interpolated(Vector3f pt, bool &valid)
     {
         Vector3f xyz = pt - floor(pt);
         Vector3c sdf[2];
@@ -474,7 +474,7 @@ struct MapRenderingDelegate
         return ToVector3c((1.0f - xyz.z) * result[2] + xyz.z * result[3]);
     }
 
-    __device__ __forceinline__ void raycast_with_colour()
+    FUSION_DEVICE inline void raycast_with_colour()
     {
         const int x = threadIdx.x + blockDim.x * blockIdx.x;
         const int y = threadIdx.y + blockDim.y * blockIdx.y;
