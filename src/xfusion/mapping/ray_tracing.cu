@@ -290,7 +290,7 @@ struct MapRenderingDelegate
     FUSION_DEVICE inline float read_sdf(const Vector3f &pt3d, bool &valid)
     {
         Voxel *voxel = NULL;
-        find_voxel(map_struct, ToVector3i(pt3d), voxel);
+        findVoxel(map_struct, ToVector3i(pt3d), voxel);
         if (voxel && voxel->weight != 0)
         {
             valid = true;
@@ -426,7 +426,7 @@ struct MapRenderingDelegate
     FUSION_DEVICE inline Vector3c read_colour(Vector3f pt3d, bool &valid)
     {
         Voxel *voxel = NULL;
-        find_voxel(map_struct, ToVector3i(pt3d), voxel);
+        findVoxel(map_struct, ToVector3i(pt3d), voxel);
         if (voxel && voxel->weight != 0)
         {
             valid = true;

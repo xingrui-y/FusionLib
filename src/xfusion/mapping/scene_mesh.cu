@@ -20,7 +20,7 @@ struct BuildVertexArray
     uint *triangle_count;
     Vector3f *surface_normal;
 
-    __device__ __forceinline__ void select_blocks() const
+    FUSION_DEVICE inline void select_blocks() const
     {
         int x = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -50,10 +50,10 @@ struct BuildVertexArray
         }
     }
 
-    __device__ __forceinline__ float read_sdf(Vector3f pt, bool &valid) const
+    FUSION_DEVICE inline float read_sdf(Vector3f pt, bool &valid) const
     {
         Voxel *voxel = NULL;
-        find_voxel(map_struct, ToVector3i(pt), voxel);
+        findVoxel(map_struct, ToVector3i(pt), voxel);
         if (voxel && voxel->weight != 0)
         {
             valid = true;
@@ -66,7 +66,7 @@ struct BuildVertexArray
         }
     }
 
-    __device__ __forceinline__ bool read_sdf_list(float *sdf, Vector3i pos) const
+    FUSION_DEVICE inline bool read_sdf_list(float *sdf, Vector3i pos) const
     {
         bool valid = false;
         sdf[0] = read_sdf(pos + Vector3f(0, 0, 0), valid);
@@ -104,7 +104,7 @@ struct BuildVertexArray
         return true;
     }
 
-    __device__ __forceinline__ float interpolate_sdf(float &v1, float &v2) const
+    FUSION_DEVICE inline float interpolate_sdf(float &v1, float &v2) const
     {
         if (fabs(0 - v1) < 1e-6)
             return 0;
@@ -115,7 +115,7 @@ struct BuildVertexArray
         return (0 - v1) / (v2 - v1);
     }
 
-    __device__ __forceinline__ int make_vertex(Vector3f *vertex_array, const Vector3i pos)
+    FUSION_DEVICE inline int make_vertex(Vector3f *vertex_array, const Vector3i pos)
     {
         float sdf[8];
 
@@ -208,7 +208,7 @@ struct BuildVertexArray
     }
 
     template <bool compute_normal = false>
-    __device__ __forceinline__ void operator()()
+    FUSION_DEVICE inline void operator()()
     {
         int x = blockIdx.y * gridDim.x + blockIdx.x;
         if (*triangle_count >= param.num_max_mesh_triangles_ || x >= *block_count)
@@ -359,7 +359,7 @@ struct BuildVertexAndColourArray
     uint *triangle_count;
     Vector3c *vertex_colour;
 
-    __device__ __forceinline__ void select_blocks() const
+    FUSION_DEVICE inline void select_blocks() const
     {
         int x = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -389,10 +389,10 @@ struct BuildVertexAndColourArray
         }
     }
 
-    __device__ __forceinline__ void read_sdf_and_colour(Vector3f pt, bool &valid, float &sdf, Vector3c &colour) const
+    FUSION_DEVICE inline void read_sdf_and_colour(Vector3f pt, bool &valid, float &sdf, Vector3c &colour) const
     {
         Voxel *vx = NULL;
-        find_voxel(map_struct, ToVector3i(pt), vx);
+        findVoxel(map_struct, ToVector3i(pt), vx);
         if (vx && vx->getWeight() > 1e-3)
         {
             valid = true;
@@ -405,7 +405,7 @@ struct BuildVertexAndColourArray
         }
     }
 
-    __device__ __forceinline__ bool read_sdf_and_colour_list(float *sdf, Vector3c *colour, Vector3i pos) const
+    FUSION_DEVICE inline bool read_sdf_and_colour_list(float *sdf, Vector3c *colour, Vector3i pos) const
     {
         bool valid = false;
         read_sdf_and_colour(pos + Vector3f(0, 0, 0), valid, sdf[0], colour[0]);
@@ -443,7 +443,7 @@ struct BuildVertexAndColourArray
         return true;
     }
 
-    __device__ __forceinline__ float interpolate_sdf(float &v1, float &v2) const
+    FUSION_DEVICE inline float interpolate_sdf(float &v1, float &v2) const
     {
         if (fabs(0 - v1) < 1e-6)
             return 0;
@@ -454,7 +454,7 @@ struct BuildVertexAndColourArray
         return (0 - v1) / (v2 - v1);
     }
 
-    __device__ __forceinline__ int make_vertex_and_colour(Vector3f *vertex_array, Vector3c *colour_array, const Vector3i pos)
+    FUSION_DEVICE inline int make_vertex_and_colour(Vector3f *vertex_array, Vector3c *colour_array, const Vector3i pos)
     {
         float sdf[8];
 
@@ -550,7 +550,7 @@ struct BuildVertexAndColourArray
         return cube_index;
     }
 
-    __device__ __forceinline__ void operator()()
+    FUSION_DEVICE inline void operator()()
     {
         int x = blockIdx.y * gridDim.x + blockIdx.x;
         if (*triangle_count >= param.num_max_mesh_triangles_ || x >= *block_count)

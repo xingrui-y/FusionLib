@@ -11,9 +11,6 @@
 #define FUSION_HOST_AND_DEVICE
 #endif
 
-#define BLOCK_SIZE 8
-#define BLOCK_SIZE3 512
-#define BLOCK_SIZE_SUB_1 7
 #define WARP_SIZE 32
 #define MAX_THREAD 1024
 

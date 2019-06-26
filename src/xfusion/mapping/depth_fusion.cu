@@ -114,7 +114,7 @@ FUSION_DEVICE inline Vector3f unproject_world(
 FUSION_DEVICE inline int create_block(MapStorage &map_struct, const Vector3i block_pos)
 {
     int hash_index;
-    create_block(map_struct, block_pos, hash_index);
+    createBlock(map_struct, block_pos, hash_index);
     return hash_index;
 }
 
@@ -137,8 +137,8 @@ __global__ void create_blocks_kernel(MapStorage map_struct, cv::cuda::PtrStepSz<
     if (z_near >= z_far)
         return;
 
-    Vector3i block_near = voxel_pos_to_block_pos(world_pt_to_voxel_pos(unproject_world(x, y, z_near, invfx, invfy, cx, cy, pose)));
-    Vector3i block_far = voxel_pos_to_block_pos(world_pt_to_voxel_pos(unproject_world(x, y, z_far, invfx, invfy, cx, cy, pose)));
+    Vector3i block_near = voxelPosToBlockPos(worldPtToVoxelPos(unproject_world(x, y, z_near, invfx, invfy, cx, cy, pose), param.voxel_size));
+    Vector3i block_far = voxelPosToBlockPos(worldPtToVoxelPos(unproject_world(x, y, z_far, invfx, invfy, cx, cy, pose), param.voxel_size));
 
     Vector3i d = block_far - block_near;
     Vector3i increment = Vector3i(d.x < 0 ? -1 : 1, d.y < 0 ? -1 : 1, d.z < 0 ? -1 : 1);
@@ -240,7 +240,7 @@ __global__ void update_map_kernel(MapStorage map_struct,
 
     HashEntry &current = visible_blocks[blockIdx.x];
 
-    Vector3i voxel_pos = block_pos_to_voxel_pos(current.pos_);
+    Vector3i voxel_pos = blockPosToVoxelPos(current.pos_);
     float dist_thresh = param.truncation_dist();
     float inv_dist_thresh = 1.0 / dist_thresh;
 
@@ -248,7 +248,7 @@ __global__ void update_map_kernel(MapStorage map_struct,
     for (int block_idx_z = 0; block_idx_z < 8; ++block_idx_z)
     {
         Vector3i local_pos = Vector3i(threadIdx.x, threadIdx.y, block_idx_z);
-        Vector3f pt = inv_pose(voxel_pos_to_world_pt(voxel_pos + local_pos));
+        Vector3f pt = inv_pose(voxelPosToWorldPt(voxel_pos + local_pos, param.voxel_size));
 
         int u = __float2int_rd(fx * pt.x / pt.z + cx + 0.5);
         int v = __float2int_rd(fy * pt.y / pt.z + cy + 0.5);
@@ -264,7 +264,7 @@ __global__ void update_map_kernel(MapStorage map_struct,
             continue;
 
         sdf = fmin(1.0f, sdf * inv_dist_thresh);
-        const int local_idx = local_pos_to_local_idx(local_pos);
+        const int local_idx = localPosToLocalIdx(local_pos);
         Voxel &voxel = map_struct.voxels_[current.ptr_ + local_idx];
 
         auto sdf_p = voxel.getSDF();
@@ -299,7 +299,7 @@ __global__ void update_map_with_colour_kernel(MapStorage map_struct,
 
     HashEntry &current = visible_blocks[blockIdx.x];
 
-    Vector3i voxel_pos = block_pos_to_voxel_pos(current.pos_);
+    Vector3i voxel_pos = blockPosToVoxelPos(current.pos_);
     float dist_thresh = param.truncation_dist();
     float inv_dist_thresh = 1.0 / dist_thresh;
 
@@ -307,7 +307,7 @@ __global__ void update_map_with_colour_kernel(MapStorage map_struct,
     for (int block_idx_z = 0; block_idx_z < 8; ++block_idx_z)
     {
         Vector3i local_pos = Vector3i(threadIdx.x, threadIdx.y, block_idx_z);
-        Vector3f pt = inv_pose(voxel_pos_to_world_pt(voxel_pos + local_pos));
+        Vector3f pt = inv_pose(voxelPosToWorldPt(voxel_pos + local_pos, param.voxel_size));
 
         int u = __float2int_rd(fx * pt.x / pt.z + cx + 0.5);
         int v = __float2int_rd(fy * pt.y / pt.z + cy + 0.5);
@@ -323,7 +323,7 @@ __global__ void update_map_with_colour_kernel(MapStorage map_struct,
             continue;
 
         sdf = fmin(1.0f, sdf * inv_dist_thresh);
-        const int local_idx = local_pos_to_local_idx(local_pos);
+        const int local_idx = localPosToLocalIdx(local_pos);
         Voxel &voxel = map_struct.voxels_[current.ptr_ + local_idx];
 
         auto sdf_p = voxel.getSDF();
@@ -372,7 +372,7 @@ __global__ void update_map_weighted_kernel(
     if (current.ptr_ < 0)
         return;
 
-    Vector3i voxel_pos = block_pos_to_voxel_pos(current.pos_);
+    Vector3i voxel_pos = blockPosToVoxelPos(current.pos_);
     float dist_thresh = param.truncation_dist();
     float inv_dist_thresh = 1.0 / dist_thresh;
 
@@ -380,7 +380,7 @@ __global__ void update_map_weighted_kernel(
     for (int block_idx_z = 0; block_idx_z < 8; ++block_idx_z)
     {
         Vector3i local_pos = Vector3i(threadIdx.x, threadIdx.y, block_idx_z);
-        Vector3f pt = inv_pose(voxel_pos_to_world_pt(voxel_pos + local_pos));
+        Vector3f pt = inv_pose(voxelPosToWorldPt(voxel_pos + local_pos, param.voxel_size));
 
         int u = __float2int_rd(fx * pt.x / pt.z + cx + 0.5);
         int v = __float2int_rd(fy * pt.y / pt.z + cy + 0.5);
@@ -397,7 +397,7 @@ __global__ void update_map_weighted_kernel(
             continue;
 
         sdf = fmin(1.0f, sdf * inv_dist_thresh);
-        const int local_idx = local_pos_to_local_idx(local_pos);
+        const int local_idx = localPosToLocalIdx(local_pos);
         Voxel &voxel = map_struct.voxels_[current.ptr_ + local_idx];
 
         auto sdf_p = voxel.getSDF();

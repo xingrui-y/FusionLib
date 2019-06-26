@@ -6,12 +6,17 @@
 #include <xfusion/mapping/voxel.h>
 #include <xfusion/mapping/hash_entry.h>
 
+#define BLOCK_SIZE 8
+#define BLOCK_SIZE3 512
+#define BLOCK_SIZE_SUB_1 7
+
 namespace fusion
 {
 
 // Map info
-struct FUSION_EXPORT MapState
+class FUSION_EXPORT MapState
 {
+public:
     // The total number of buckets in the map
     // NOTE: buckets are allocated for each main entry
     // It dose not cover the excess entries
@@ -43,6 +48,13 @@ struct FUSION_EXPORT MapState
     FUSION_HOST_AND_DEVICE float inverse_voxel_size() const;
     FUSION_HOST_AND_DEVICE float truncation_dist() const;
     FUSION_HOST_AND_DEVICE float raycast_step_scale() const;
+};
+
+struct MapSize
+{
+    int num_blocks;
+    int num_hash_entries;
+    int num_buckets;
 };
 
 FUSION_DEVICE extern MapState param;
@@ -83,25 +95,29 @@ struct FUSION_EXPORT MapStruct
 
     MapStorage map;
     MapState state;
+    MapSize size;
 };
 
-FUSION_DEVICE bool DeleteHashEntry(MapStorage &map, HashEntry &current);
-FUSION_DEVICE void create_block(MapStorage &map, const Vector3i &blockPos, int &bucket_index);
-FUSION_DEVICE void delete_block(MapStorage &map, HashEntry &current);
-FUSION_DEVICE bool CreateHashEntry(MapStorage &map, const Vector3i &pos, const int &offset, HashEntry *entry);
-FUSION_DEVICE void find_voxel(const MapStorage &map, const Vector3i &voxel_pos, Voxel *&out);
-FUSION_DEVICE void find_entry(const MapStorage &map, const Vector3i &block_pos, HashEntry *&out);
-FUSION_DEVICE int compute_hash(const Vector3i &pos);
-FUSION_DEVICE bool lock_bucket(int *mutex);
-FUSION_DEVICE void unlock_bucket(int *mutex);
-FUSION_DEVICE Vector3i world_pt_to_voxel_pos(Vector3f pt);
-FUSION_DEVICE Vector3f voxel_pos_to_world_pt(const Vector3i &voxel_pos);
-FUSION_DEVICE Vector3i voxel_pos_to_block_pos(Vector3i voxel_pos);
-FUSION_DEVICE Vector3i block_pos_to_voxel_pos(const Vector3i &block_pos);
-FUSION_DEVICE Vector3i voxel_pos_to_local_pos(Vector3i pos);
-FUSION_DEVICE int local_pos_to_local_idx(const Vector3i &pos);
-FUSION_DEVICE Vector3i local_idx_to_local_pos(const int &idx);
-FUSION_DEVICE int voxel_pos_to_local_idx(const Vector3i &pos);
+FUSION_DEVICE bool createHashEntry(MapStorage &map, const Vector3i &pos, const int &offset, HashEntry *entry);
+FUSION_DEVICE bool deleteHashEntry(int *mem_counter, int *mem, int no_blocks, HashEntry &entry);
+// FUSION_DEVICE bool deleteHashEntry(MapStorage &map, HashEntry &current);
+FUSION_DEVICE void createBlock(MapStorage &map, const Vector3i &blockPos, int &bucket_index);
+FUSION_DEVICE void deleteBlock(MapStorage &map, HashEntry &current);
+FUSION_DEVICE void findVoxel(const MapStorage &map, const Vector3i &voxel_pos, Voxel *&out);
+FUSION_DEVICE void findEntry(const MapStorage &map, const Vector3i &block_pos, HashEntry *&out);
+
+//! Handy functions to modify the map
+FUSION_HOST_AND_DEVICE int computeHash(const Vector3i &blockPos, const int &noBuckets);
+
+//! Coordinate converters
+FUSION_HOST_AND_DEVICE Vector3i worldPtToVoxelPos(Vector3f pt, const float &voxelSize);
+FUSION_HOST_AND_DEVICE Vector3f voxelPosToWorldPt(const Vector3i &voxelPos, const float &voxelSize);
+FUSION_HOST_AND_DEVICE Vector3i voxelPosToBlockPos(Vector3i voxelPos);
+FUSION_HOST_AND_DEVICE Vector3i blockPosToVoxelPos(const Vector3i &blockPos);
+FUSION_HOST_AND_DEVICE Vector3i voxelPosToLocalPos(Vector3i voxelPos);
+FUSION_HOST_AND_DEVICE int localPosToLocalIdx(const Vector3i &localPos);
+FUSION_HOST_AND_DEVICE Vector3i localIdxToLocalPos(const int &localIdx);
+FUSION_HOST_AND_DEVICE int voxelPosToLocalIdx(const Vector3i &voxelPos);
 
 } // namespace fusion
 
