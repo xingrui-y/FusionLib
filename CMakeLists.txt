@@ -12,6 +12,7 @@ PRIVATE
     # core modules
     src/xfusion/core/cuda_imgproc.cu
     src/xfusion/core/device_malloc.cpp
+    src/xfusion/core/build_pyramid.cpp
 
     # icp
     src/xfusion/icp/estimator.cu

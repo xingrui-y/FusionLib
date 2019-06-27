@@ -49,17 +49,17 @@ struct FUSION_EXPORT Matrix3x4
 {
     Vector4<T> R0, R1, R2;
 
-    FUSION_HOST_AND_DEVICE Matrix3x4() : R0(0), R1(0), R2(0) {}
+    FUSION_HOST_AND_DEVICE inline Matrix3x4() : R0(0), R1(0), R2(0) {}
 
 #ifdef EIGEN_MACRO_H
-    FUSION_HOST_AND_DEVICE Matrix3x4(const Eigen::Matrix<float, 3, 4> &M)
+    FUSION_HOST_AND_DEVICE inline Matrix3x4(const Eigen::Matrix<float, 3, 4> &M)
         : R0(M(0, 0), M(0, 1), M(0, 2), M(0, 3)),
           R1(M(1, 0), M(1, 1), M(1, 2), M(1, 3)),
           R2(M(2, 0), M(2, 1), M(2, 2), M(2, 3))
     {
     }
 
-    FUSION_HOST_AND_DEVICE Matrix3x4(const Eigen::Matrix<float, 4, 4> &M)
+    FUSION_HOST_AND_DEVICE inline Matrix3x4(const Eigen::Matrix<float, 4, 4> &M)
         : R0(M(0, 0), M(0, 1), M(0, 2), M(0, 3)),
           R1(M(1, 0), M(1, 1), M(1, 2), M(1, 3)),
           R2(M(2, 0), M(2, 1), M(2, 2), M(2, 3))
@@ -68,14 +68,14 @@ struct FUSION_EXPORT Matrix3x4
 #endif
 
 #ifdef SOPHUS_SE3_HPP
-    FUSION_HOST_AND_DEVICE Matrix3x4(const Sophus::Matrix<float, 3, 4> &M)
+    FUSION_HOST_AND_DEVICE inline Matrix3x4(const Sophus::Matrix<float, 3, 4> &M)
         : R0(M(0, 0), M(0, 1), M(0, 2), M(0, 3)),
           R1(M(1, 0), M(1, 1), M(1, 2), M(1, 3)),
           R2(M(2, 0), M(2, 1), M(2, 2), M(2, 3))
     {
     }
 
-    FUSION_HOST_AND_DEVICE Matrix3x4(const Sophus::Matrix<float, 4, 4> &M)
+    FUSION_HOST_AND_DEVICE inline Matrix3x4(const Sophus::Matrix<float, 4, 4> &M)
         : R0(M(0, 0), M(0, 1), M(0, 2), M(0, 3)),
           R1(M(1, 0), M(1, 1), M(1, 2), M(1, 3)),
           R2(M(2, 0), M(2, 1), M(2, 2), M(2, 3))
@@ -83,7 +83,7 @@ struct FUSION_EXPORT Matrix3x4
     }
 #endif
 
-    FUSION_HOST_AND_DEVICE Vector3<T> rotate(const Vector3<T> &V) const
+    FUSION_HOST_AND_DEVICE inline Vector3<T> rotate(const Vector3<T> &V) const
     {
         return Vector3<T>(
             R0.x * V.x + R0.y * V.y + R0.z * V.z,
@@ -91,13 +91,13 @@ struct FUSION_EXPORT Matrix3x4
             R2.x * V.x + R2.y * V.y + R2.z * V.z);
     }
 
-    FUSION_HOST_AND_DEVICE Vector3<T> operator()(const Vector3<T> &V) const
+    FUSION_HOST_AND_DEVICE inline Vector3<T> operator()(const Vector3<T> &V) const
     {
         Vector4<T> V4 = Vector4<T>(V, 1);
         return Vector3<T>(R0 * V4, R1 * V4, R2 * V4);
     }
 
-    FUSION_HOST_AND_DEVICE Vector4<T> operator()(const Vector4<T> &V) const
+    FUSION_HOST_AND_DEVICE inline Vector4<T> operator()(const Vector4<T> &V) const
     {
         return Vector4<T>(R0 * V, R1 * V, R2 * V, 1);
     }

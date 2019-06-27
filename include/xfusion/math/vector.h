@@ -10,6 +10,7 @@ namespace fusion
 
 using uchar = unsigned char;
 
+//! 2-dimensional vector type
 template <class T>
 struct Vector2
 {
@@ -17,122 +18,102 @@ struct Vector2
     FUSION_HOST_AND_DEVICE inline Vector2(const Vector2<T> &other) : x(other.x), y(other.y) {}
     FUSION_HOST_AND_DEVICE inline Vector2(T x, T y) : x(x), y(y) {}
     FUSION_HOST_AND_DEVICE inline Vector2(T val) : x(val), y(val) {}
-    FUSION_HOST_AND_DEVICE inline Vector2<T> operator+(const Vector2<T> &other) const;
-    FUSION_HOST_AND_DEVICE inline Vector2<T> operator-(const Vector2<T> &other) const;
-    FUSION_HOST_AND_DEVICE inline T dot(const Vector2<T> &V) const;
-    FUSION_HOST_AND_DEVICE inline T operator*(const Vector2<T> &other) const;
-    FUSION_HOST_AND_DEVICE inline Vector2<T> operator/(const T val) const;
+
+    FUSION_HOST_AND_DEVICE inline Vector2<T> operator+(const Vector2<T> &other) const
+    {
+        return Vector2<T>(x + other.x, y + other.y);
+    }
+
+    FUSION_HOST_AND_DEVICE inline Vector2<T> operator-(const Vector2<T> &other) const
+    {
+        return Vector2<T>(x - other.x, y - other.y);
+    }
+
+    FUSION_HOST_AND_DEVICE inline T dot(const Vector2<T> &V) const
+    {
+        return x * V.x + y * V.y;
+    }
+
+    FUSION_HOST_AND_DEVICE inline T operator*(const Vector2<T> &other) const
+    {
+        return x * other.x + y * other.y;
+    }
+
+    FUSION_HOST_AND_DEVICE inline Vector2<T> operator/(const T val) const
+    {
+        return Vector2<T>(x / val, y / val);
+    }
 
     T x, y;
 };
 
-template <class T>
-FUSION_HOST_AND_DEVICE inline Vector2<T> Vector2<T>::operator+(const Vector2<T> &other) const
-{
-    return Vector2<T>(x + other.x, y + other.y);
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline Vector2<T> Vector2<T>::operator-(const Vector2<T> &other) const
-{
-    return Vector2<T>(x - other.x, y - other.y);
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline T Vector2<T>::dot(const Vector2<T> &V) const
-{
-    return x * V.x + y * V.y;
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline T Vector2<T>::operator*(const Vector2<T> &other) const
-{
-    return x * other.x + y * other.y;
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline Vector2<T> Vector2<T>::operator/(const T val) const
-{
-    return Vector2<T>(x / val, y / val);
-}
-
+//! 3-dimensional vector type
 template <class T>
 struct Vector3
 {
     FUSION_HOST_AND_DEVICE inline Vector3() : x(0), y(0), z(0) {}
     FUSION_HOST_AND_DEVICE inline Vector3(const Vector3<T> &other) : x(other.x), y(other.y), z(other.z) {}
     FUSION_HOST_AND_DEVICE inline Vector3(T x, T y, T z) : x(x), y(y), z(z) {}
+    FUSION_HOST_AND_DEVICE inline Vector3(T x, T y) : x(x), y(y), z(1) {}
     FUSION_HOST_AND_DEVICE inline Vector3(T val) : x(val), y(val), z(val) {}
-    FUSION_HOST_AND_DEVICE inline bool operator==(const Vector3<T> &other) const;
-    FUSION_HOST_AND_DEVICE inline Vector3<T> operator+=(const Vector3<T> &other);
-    FUSION_HOST_AND_DEVICE inline Vector3<T> operator+(const Vector3<T> &other) const;
-    FUSION_HOST_AND_DEVICE inline Vector3<T> operator-(const Vector3<T> &other) const;
-    FUSION_HOST_AND_DEVICE inline T operator*(const Vector3<T> &other) const;
-    FUSION_HOST_AND_DEVICE inline Vector3<T> operator/(const T val) const;
-    FUSION_HOST_AND_DEVICE inline Vector3<T> operator%(const T val) const;
-    FUSION_HOST_AND_DEVICE inline float norm() const;
-    FUSION_HOST_AND_DEVICE inline Vector3<T> cross(const Vector3<T> &other) const;
+
+    FUSION_HOST_AND_DEVICE inline bool operator==(const Vector3<T> &other) const
+    {
+        return x == other.x && y == other.y && z == other.z;
+    }
+
+    FUSION_HOST_AND_DEVICE inline Vector3<T> operator+=(const Vector3<T> &other)
+    {
+        x += other.x;
+        y += other.y;
+        z += other.z;
+        return *this;
+    }
+
+    FUSION_HOST_AND_DEVICE inline Vector3<T> operator+(const Vector3<T> &other) const
+    {
+        return Vector3<T>(x + other.x, y + other.y, z + other.z);
+    }
+
+    FUSION_HOST_AND_DEVICE inline Vector3<T> operator-(const Vector3<T> &other) const
+    {
+        return Vector3<T>(x - other.x, y - other.y, z - other.z);
+    }
+
+    FUSION_HOST_AND_DEVICE inline T operator*(const Vector3<T> &other) const
+    {
+        return x * other.x + y * other.y + z * other.z;
+    }
+
+    FUSION_HOST_AND_DEVICE inline Vector3<T> operator/(const T val) const
+    {
+        return Vector3<T>(x / val, y / val, z / val);
+    }
+
+    FUSION_HOST_AND_DEVICE inline Vector3<T> operator%(const T val) const
+    {
+        return Vector3<T>(x % val, y % val, z % val);
+    }
+
+    FUSION_HOST_AND_DEVICE inline float norm() const
+    {
+        return sqrt((float)(x * x + y * y + z * z));
+    }
+
+    FUSION_HOST_AND_DEVICE inline T dot(const Vector3<T> &other) const
+    {
+        return x * other.x + y * other.y + z * other.z;
+    }
+
+    FUSION_HOST_AND_DEVICE inline Vector3<T> cross(const Vector3<T> &other) const
+    {
+        return Vector3<T>(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x);
+    }
 
     T x, y, z;
 };
 
-template <class T>
-FUSION_HOST_AND_DEVICE inline bool Vector3<T>::operator==(const Vector3<T> &other) const
-{
-    return x == other.x && y == other.y && z == other.z;
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline Vector3<T> Vector3<T>::operator+=(const Vector3<T> &other)
-{
-    x += other.x;
-    y += other.y;
-    z += other.z;
-    return *this;
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline Vector3<T> Vector3<T>::operator+(const Vector3<T> &other) const
-{
-    return Vector3<T>(x + other.x, y + other.y, z + other.z);
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline Vector3<T> Vector3<T>::operator-(const Vector3<T> &other) const
-{
-    return Vector3<T>(x - other.x, y - other.y, z - other.z);
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline T Vector3<T>::operator*(const Vector3<T> &other) const
-{
-    return x * other.x + y * other.y + z * other.z;
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline Vector3<T> Vector3<T>::operator/(const T val) const
-{
-    return Vector3<T>(x / val, y / val, z / val);
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline Vector3<T> Vector3<T>::operator%(const T val) const
-{
-    return Vector3<T>(x % val, y % val, z % val);
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline float Vector3<T>::norm() const
-{
-    return sqrt((float)(x * x + y * y + z * z));
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline Vector3<T> Vector3<T>::cross(const Vector3<T> &other) const
-{
-    return Vector3<T>(y * other.z - z * other.y, z * other.x - x * other.z, x * other.y - y * other.x);
-}
-
+//! 4-dimensional vector type
 template <class T>
 struct Vector4
 {
@@ -142,38 +123,30 @@ struct Vector4
     FUSION_HOST_AND_DEVICE inline Vector4(T val) : x(val), y(val), z(val), w(val) {}
     FUSION_HOST_AND_DEVICE inline Vector4(const Vector3<T> &other, const T &val) : x(other.x), y(other.y), z(other.z), w(val) {}
 
-    FUSION_HOST_AND_DEVICE inline Vector4<T> operator+(const Vector4<T> &other) const;
-    FUSION_HOST_AND_DEVICE inline Vector4<T> operator-(const Vector4<T> &other) const;
-    FUSION_HOST_AND_DEVICE inline T operator*(const Vector4<T> &other) const;
-    FUSION_HOST_AND_DEVICE inline Vector4<T> operator/(const T val) const;
+    FUSION_HOST_AND_DEVICE inline Vector4<T> operator+(const Vector4<T> &other) const
+    {
+        return Vector4<T>(x + other.x, y + other.y, z + other.z, w + other.w);
+    }
+
+    FUSION_HOST_AND_DEVICE inline Vector4<T> operator-(const Vector4<T> &other) const
+    {
+        return Vector4<T>(x - other.x, y - other.y, z - other.z, w - other.w);
+    }
+
+    FUSION_HOST_AND_DEVICE inline T operator*(const Vector4<T> &other) const
+    {
+        return x * other.x + y * other.y + z * other.z + w * other.w;
+    }
+
+    FUSION_HOST_AND_DEVICE inline Vector4<T> operator/(const T val) const
+    {
+        return Vector4<T>(x / val, y / val, z / val, w / val);
+    }
 
     T x, y, z, w;
 };
 
-template <class T>
-FUSION_HOST_AND_DEVICE inline Vector4<T> Vector4<T>::operator+(const Vector4<T> &other) const
-{
-    return Vector4<T>(x + other.x, y + other.y, z + other.z, w + other.w);
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline Vector4<T> Vector4<T>::operator-(const Vector4<T> &other) const
-{
-    return Vector4<T>(x - other.x, y - other.y, z - other.z, w - other.w);
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline T Vector4<T>::operator*(const Vector4<T> &other) const
-{
-    return x * other.x + y * other.y + z * other.z + w * other.w;
-}
-
-template <class T>
-FUSION_HOST_AND_DEVICE inline Vector4<T> Vector4<T>::operator/(const T val) const
-{
-    return Vector4<T>(x / val, y / val, z / val, w / val);
-}
-
+//! Vector aliases
 using Vector2i = Vector2<int>;
 using Vector2s = Vector2<short>;
 using Vector2f = Vector2<float>;
@@ -190,6 +163,8 @@ using Vector4f = Vector4<float>;
 using Vector4c = Vector4<uchar>;
 using Vector4d = Vector4<double>;
 
+//! Vector Maths
+//! Defined basic mathematic operations
 template <class T, class U>
 FUSION_HOST_AND_DEVICE inline Vector3<T> operator*(T S, Vector3<U> V)
 {
