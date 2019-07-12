@@ -93,6 +93,14 @@ void create_mesh_with_colour(
     void *vertex_data,
     void *vertex_colour);
 
+void count_visible_entry(
+    const MapStorage map_struct,
+    const MapSize map_size,
+    const IntrinsicMatrix &K,
+    const Sophus::SE3d frame_pose,
+    HashEntry *const visible_entry,
+    uint &visible_block_count);
+
 } // namespace cuda
 } // namespace fusion
 

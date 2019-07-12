@@ -7,28 +7,16 @@
 #define MAX_THREAD 1024
 #define MAX_WARP_SIZE 32
 
-#if defined(__GNUC__)
-#define safe_call(expr) ___SafeCall(expr, __FILE__, __LINE__, __func__)
-#else
-#define safe_call(expr) ___SafeCall(expr, __FILE__, __LINE__)
-#endif
-
-static inline void error(const char *error_string, const char *file, const int line, const char *func)
+template <typename NumType1, typename NumType2>
+static inline int div_up(NumType1 dividend, NumType2 divisor)
 {
-    std::cout << "Error: " << error_string << "\t" << file << ":" << line << std::endl;
-    exit(0);
+    return (int)((dividend + divisor - 1) / divisor);
 }
 
-static inline void ___SafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+template <class FunctorType>
+__global__ void call_device_functor(FunctorType device_functor)
 {
-    if (cudaSuccess != err)
-        error(cudaGetErrorString(err), file, line, func);
-}
-
-template <class OP1, class OP2>
-static inline int div_up(OP1 a, OP2 b)
-{
-    return (int)((a + b - 1) / b);
+    device_functor();
 }
 
 #endif

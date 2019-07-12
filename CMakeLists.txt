@@ -73,3 +73,10 @@ install(EXPORT XFusion-targets
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
         DESTINATION ${CMAKE_INSTALL_PREFIX})
         
+#for unit test
+add_executable(test "")
+
+target_sources(test
+PRIVATE
+    test/unitest.cu
+)

@@ -4,6 +4,7 @@
 #include <xfusion/core/cuda_utils.h>
 #include <xfusion/mapping/prefix_sum.h>
 #include <xfusion/mapping/device_tables.h>
+#include "xfusion/core/cuda_safe_call.h"
 
 namespace fusion
 {

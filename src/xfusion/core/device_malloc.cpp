@@ -1,5 +1,6 @@
 #include <xfusion/core/device_malloc.h>
 #include <xfusion/core/cuda_utils.h>
+#include "xfusion/core/cuda_safe_call.h"
 
 namespace fusion
 {

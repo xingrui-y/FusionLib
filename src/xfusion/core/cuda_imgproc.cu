@@ -172,7 +172,7 @@ __global__ void warp_image_kernel(const cv::cuda::PtrStepSz<Vector3c> src,
     if (x >= src.cols || y >= src.rows)
         return;
 
-    dst.ptr(y)[x] = ToVector3c(0);
+    dst.ptr(y)[x] = Vector3c(0);
     Vector3f dst_pt_src = pose(ToVector3(vmap_dst.ptr(y)[x]));
 
     float u = K.fx * dst_pt_src.x / dst_pt_src.z + K.cx;
@@ -256,7 +256,7 @@ __global__ void backProjectDepthK(const cv::cuda::PtrStepSz<float> depth, cv::cu
     vmap.ptr(y)[x] = Vector4f(nanf("NAN"), nanf("NAN"), nanf("NAN"), -1.0f);
     float z = depth.ptr(y)[x];
     // z = (z == z) ? z : nanf("NAN");
-    if(z > 0.3f && z < 5.0f)
+    if (z > 0.3f && z < 5.0f)
     {
         vmap.ptr(y)[x] = Vector4f(z * (x - intrinsics.cx) * intrinsics.invfx, z * (y - intrinsics.cy) * intrinsics.invfy, z, 1.0f);
     }

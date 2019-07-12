@@ -7,7 +7,7 @@ namespace fusion
 {
 
 template <int thread_block, class T>
-FUSION_DEVICE inline int exclusive_scan(T element, T *sum)
+FUSION_DEVICE inline int exclusive_scan(T element, T *const sum)
 {
 
     __shared__ T buffer[thread_block];

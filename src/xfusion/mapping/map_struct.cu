@@ -2,6 +2,7 @@
 #include <xfusion/math/vector.h>
 #include <xfusion/mapping/map_struct.h>
 #include <xfusion/core/cuda_utils.h>
+#include "xfusion/core/cuda_safe_call.h"
 #include <fstream>
 
 namespace fusion

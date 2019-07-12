@@ -3,6 +3,7 @@
 #include <xfusion/math/vector.h>
 #include <xfusion/core/cuda_utils.h>
 #include <xfusion/mapping/prefix_sum.h>
+#include "xfusion/core/cuda_safe_call.h"
 #include <opencv2/opencv.hpp>
 
 #define RENDERING_BLOCK_SIZE_X 16
@@ -262,7 +263,7 @@ void create_rendering_blocks(
     dim3 thread = dim3(MAX_THREAD);
     dim3 block = dim3(div_up(count_visible_block, thread.x));
 
-    create_rendering_blocks_kernel<<<block, thread>>>(delegate);
+    call_device_functor<<<block, thread>>>(delegate);
 
     safe_call(cudaMemcpy(&count_rendering_block, count_device, sizeof(uint), cudaMemcpyDeviceToHost));
     if (count_rendering_block == 0)
@@ -563,15 +564,15 @@ struct MapRenderingDelegate
     }
 };
 
-__global__ void __launch_bounds__(32, 16) raycast_kernel(MapRenderingDelegate delegate)
-{
-    delegate();
-}
+// __global__ void __launch_bounds__(32, 16) raycast_kernel(MapRenderingDelegate delegate)
+// {
+//     delegate();
+// }
 
-__global__ void __launch_bounds__(32, 16) raycast_with_colour_kernel(MapRenderingDelegate delegate)
-{
-    delegate.raycast_with_colour();
-}
+// __global__ void __launch_bounds__(32, 16) raycast_with_colour_kernel(MapRenderingDelegate delegate)
+// {
+//     delegate.raycast_with_colour();
+// }
 
 void raycast(MapStorage map_struct,
              MapState state,
@@ -604,7 +605,7 @@ void raycast(MapStorage map_struct,
     dim3 thread(4, 8);
     dim3 block(div_up(cols, thread.x), div_up(rows, thread.y));
 
-    raycast_kernel<<<block, thread>>>(delegate);
+    call_device_functor<<<block, thread>>>(delegate);
 }
 
 void raycast_with_colour(MapStorage map_struct,
@@ -640,7 +641,169 @@ void raycast_with_colour(MapStorage map_struct,
     dim3 thread(4, 8);
     dim3 block(div_up(cols, thread.x), div_up(rows, thread.y));
 
-    raycast_with_colour_kernel<<<block, thread>>>(delegate);
+    call_device_functor<<<block, thread>>>(delegate);
+}
+
+FUSION_DEVICE inline bool is_vertex_visible(
+    Vector3f pt, Matrix3x4f inv_pose,
+    int cols, int rows, float fx,
+    float fy, float cx, float cy)
+{
+    pt = inv_pose(pt);
+    Vector2f pt2d = Vector2f(fx * pt.x / pt.z + cx, fy * pt.y / pt.z + cy);
+    return !(pt2d.x < 0 || pt2d.y < 0 ||
+             pt2d.x > cols - 1 || pt2d.y > rows - 1 ||
+             pt.z < param.zmin_update || pt.z > param.zmax_update);
+}
+
+FUSION_DEVICE inline bool is_block_visible(
+    const Vector3i &block_pos,
+    const Matrix3x4f &inv_pose,
+    int cols, int rows, float fx,
+    float fy, float cx, float cy)
+{
+    float scale = param.block_size_metric();
+#pragma unroll
+    for (int corner = 0; corner < 8; ++corner)
+    {
+        Vector3i tmp = block_pos;
+        tmp.x += (corner & 1) ? 1 : 0;
+        tmp.y += (corner & 2) ? 1 : 0;
+        tmp.z += (corner & 4) ? 1 : 0;
+
+        if (is_vertex_visible(tmp * scale, inv_pose, cols, rows, fx, fy, cx, cy))
+            return true;
+    }
+
+    return false;
+}
+
+class VisibleEntryEvaluateFunctor
+{
+public:
+    FUSION_HOST VisibleEntryEvaluateFunctor(
+        const IntrinsicMatrix K,
+        const Matrix3x4f Tw2c)
+        : cols(K.width),
+          rows(K.height),
+          fx(K.fx), fy(K.fy),
+          cx(K.cx), cy(K.cy),
+          Tw2c(Tw2c)
+    {
+    }
+
+    FUSION_HOST VisibleEntryEvaluateFunctor(const VisibleEntryEvaluateFunctor &other)
+        : fx(other.fx), fy(other.fy), cx(other.cx), cy(other.cy),
+          Tw2c(other.Tw2c), cols(other.cols), rows(other.rows)
+    {
+    }
+
+    FUSION_DEVICE inline bool operator()(const HashEntry &entry) const
+    {
+        return is_block_visible(entry.pos_, Tw2c, cols, rows, fx, fy, cx, cy);
+    }
+
+private:
+    int cols, rows;
+    float fx, fy, cx, cy;
+    const Matrix3x4f Tw2c;
+};
+
+class EvalAllocatedEntryFunctor
+{
+public:
+    FUSION_HOST EvalAllocatedEntryFunctor();
+    FUSION_DEVICE inline bool operator()(const HashEntry &entry) const
+    {
+        return entry.ptr_ >= 0;
+    }
+};
+
+template <typename EvaluateFunctor>
+class IdentifyEntryFunctor
+{
+public:
+    FUSION_HOST IdentifyEntryFunctor(
+        HashEntry *const entry_list,
+        HashEntry *const copy_list,
+        const int MAX_ENTRY,
+        const EvaluateFunctor evaluator,
+        uint *const count)
+        : all_entry(entry_list),
+          num_entry(num_entry),
+          evaluator(evaluator),
+          count_entry(count),
+          copied_entry(copy_list)
+    {
+    }
+
+    FUSION_DEVICE void operator()() const
+    {
+        const int idx = threadIdx.x + blockIdx.x * blockDim.x;
+        if (idx >= num_entry)
+            return;
+
+        __shared__ bool need_scan;
+
+        if (threadIdx.x == 0)
+            need_scan = false;
+
+        __syncthreads();
+
+        if (evaluator(all_entry[idx]))
+        {
+            need_scan = true;
+        }
+
+        __syncthreads();
+
+        if (need_scan)
+        {
+            const int copy_idx = exclusive_scan<1024>(1u, count_entry);
+            if (copy_idx != -1)
+            {
+                copied_entry[copy_idx] = all_entry[idx];
+            }
+        }
+    }
+
+private:
+    int num_entry;
+    uint *count_entry;
+    HashEntry *all_entry;
+    HashEntry *copied_entry;
+    EvaluateFunctor evaluator;
+};
+
+void count_visible_entry(
+    const MapStorage map_struct,
+    const MapSize map_size,
+    const IntrinsicMatrix &K,
+    const Sophus::SE3d frame_pose,
+    HashEntry *const visible_entry,
+    uint &visible_block_count)
+{
+    visible_block_count = 0;
+    VisibleEntryEvaluateFunctor evaluator(K, frame_pose.cast<float>().matrix3x4());
+
+    uint *visible_count = NULL;
+    safe_call(cudaMalloc((void **)&visible_count, sizeof(uint)));
+    safe_call(cudaMemset(visible_count, 0, sizeof(uint)));
+
+    IdentifyEntryFunctor<VisibleEntryEvaluateFunctor> device_functor(
+        map_struct.hash_table_,
+        visible_entry,
+        map_size.num_hash_entries,
+        evaluator,
+        visible_count);
+
+    dim3 block(MAX_THREAD);
+    dim3 grid = dim3(div_up(map_size.num_hash_entries, block.x));
+
+    call_device_functor<<<grid, block>>>(device_functor);
+
+    safe_call(cudaMemcpy(&visible_block_count, visible_count, sizeof(uint), cudaMemcpyDeviceToHost));
+    safe_call(cudaFree(visible_count));
 }
 
 } // namespace cuda
